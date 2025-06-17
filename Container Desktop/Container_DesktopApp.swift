@@ -114,7 +114,7 @@ struct MenuBarView: View {
                             }
                         } label: {
                             Label {
-                                Text(container.configuration.hostname ?? "Unknown")
+                                Text(container.configuration.id)
                             } icon: {
                                 Circle()
                                     .fill(container.status.lowercased() == "running" ? .green : .gray)

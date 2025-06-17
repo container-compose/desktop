@@ -353,10 +353,24 @@ struct ContentView: View {
     @State private var selectedContainer: String?
 
     var body: some View {
-        if containerService.systemStatus == .stopped {
-            emptyStateView
-        } else {
-            mainInterfaceView
+        Group {
+            if containerService.systemStatus == .stopped {
+                emptyStateView
+            } else {
+                mainInterfaceView
+            }
+        }
+        .onAppear {
+            // Set default selections when app launches
+            if selection == nil {
+                selection = "containers"
+            }
+        }
+        .onChange(of: containerService.containers) { _, newContainers in
+            // Auto-select first container when containers load
+            if selectedContainer == nil && !newContainers.isEmpty {
+                selectedContainer = newContainers[0].configuration.id
+            }
         }
     }
 
@@ -370,7 +384,6 @@ struct ContentView: View {
                     }
                 }
             )
-
 
             Text("Container is not currently runnning")
                 .font(.title2)
@@ -593,7 +606,7 @@ struct ContentView: View {
     private func containerHeader(container: Container) -> some View {
         HStack {
             VStack(alignment: .leading, spacing: 4) {
-                Text(container.configuration.hostname ?? "Unknown Container")
+                Text(container.configuration.id)
                     .font(.title2)
                     .fontWeight(.semibold)
 
@@ -926,7 +939,7 @@ struct ContainerRow: View {
     var body: some View {
         NavigationLink(value: container.configuration.id) {
             VStack(alignment: .leading) {
-                Text(container.configuration.hostname ?? "Unknown")
+                Text(container.configuration.id)
                     .badge(container.status)
                 Text(networkAddress)
                     .font(.subheadline)
