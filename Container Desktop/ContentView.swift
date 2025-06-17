@@ -234,8 +234,7 @@ class ContainerService: ObservableObject {
 }
 
 struct ContentView: View {
-
-    @StateObject private var containerService = ContainerService()
+    @EnvironmentObject var containerService: ContainerService
     @State private var selection: String?
     @State private var selectedContainer: String?
 
@@ -377,7 +376,7 @@ struct ContentView: View {
                 }
                 .buttonStyle(.borderless)
                 .font(.caption)
-                .disabled(containerService.isSystemLoading)
+                .disabled(containerService.isSystemLoading || containerService.systemStatus == .stopped)
 
                 Spacer()
             }
@@ -656,6 +655,7 @@ struct CursorModifier: ViewModifier {
 
 #Preview {
     ContentView()
+        .environmentObject(ContainerService())
 }
 
 struct Container: Codable {
