@@ -6,50 +6,118 @@ import SwiftUI
 struct ContainerDetailView: View {
     let container: Container
     @EnvironmentObject var containerService: ContainerService
+    @State private var selectedTab: ContainerTab = .overview
+
+    enum ContainerTab: String, CaseIterable {
+        case overview = "Overview"
+        case logs = "Logs"
+
+        var systemImage: String {
+            switch self {
+            case .overview:
+                return "info.circle"
+            case .logs:
+                return "doc.text"
+            }
+        }
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            // Header with controls
+            containerHeaderSection
+            tabPickerSection
+            tabContentSection
+        }
+    }
+
+    private var containerHeaderSection: some View {
+        VStack(spacing: 0) {
             containerHeader(container: container)
+            Divider()
+        }
+    }
+
+    private var tabPickerSection: some View {
+        VStack(spacing: 0) {
+            HStack {
+                ForEach(ContainerTab.allCases, id: \.self) { tab in
+                    tabButton(for: tab)
+                }
+                Spacer()
+            }
+            .padding(.horizontal)
+            .padding(.vertical, 8)
 
             Divider()
+        }
+    }
 
-            // Scrollable content
-            ScrollView {
-                VStack(alignment: .leading, spacing: 20) {
-                    // Overview and Image side by side
-                    HStack(alignment: .top, spacing: 20) {
-                        containerOverviewSection(container: container)
-                        containerImageSection(container: container)
-                    }
-
-                    Divider()
-
-                    // Network section full width
-                    containerNetworkSection(container: container)
-
-                    Divider()
-
-                    // Resources and Process side by side
-                    HStack(alignment: .top, spacing: 20) {
-                        containerResourcesSection(container: container)
-                        containerProcessSection(container: container)
-                    }
-
-                    Divider()
-
-                    // Environment variables section
-                    containerEnvironmentSection(container: container)
-
-                    Divider()
-
-                    // Mounts section
-                    containerMountsSection(container: container)
-
-                    Spacer(minLength: 20)
-                }
-                .padding()
+    private func tabButton(for tab: ContainerTab) -> some View {
+        Button(action: {
+            selectedTab = tab
+        }) {
+            HStack {
+                SwiftUI.Image(systemName: tab.systemImage)
+                Text(tab.rawValue)
             }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 8)
+            .background(
+                selectedTab == tab ? Color.accentColor.opacity(0.2) : Color.clear
+            )
+            .foregroundColor(selectedTab == tab ? .accentColor : .secondary)
+            .cornerRadius(6)
+        }
+        .buttonStyle(.plain)
+    }
+
+    private var tabContentSection: some View {
+        Group {
+            switch selectedTab {
+            case .overview:
+                containerOverviewTab
+            case .logs:
+                LogsView(containerId: container.configuration.id)
+                    .environmentObject(containerService)
+            }
+        }
+    }
+
+    private var containerOverviewTab: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 20) {
+                // Overview and Image side by side
+                HStack(alignment: .top, spacing: 20) {
+                    containerOverviewSection(container: container)
+                    containerImageSection(container: container)
+                }
+
+                Divider()
+
+                // Network section full width
+                containerNetworkSection(container: container)
+
+                Divider()
+
+                // Resources and Process side by side
+                HStack(alignment: .top, spacing: 20) {
+                    containerResourcesSection(container: container)
+                    containerProcessSection(container: container)
+                }
+
+                Divider()
+
+                // Environment variables section
+                containerEnvironmentSection(container: container)
+
+                Divider()
+
+                // Mounts section
+                containerMountsSection(container: container)
+
+                Spacer(minLength: 20)
+            }
+            .padding()
         }
     }
 
@@ -1051,7 +1119,7 @@ struct MountDetailView: View {
             SwiftUI.Image(systemName: mount.mount.type.virtiofs != nil ? "externaldrive" : "folder")
                 .font(.system(size: 20))
                 .foregroundColor(.blue)
-            
+
             VStack(alignment: .leading) {
                 HStack {
                     Text(URL(fileURLWithPath: mount.mount.source).lastPathComponent)
@@ -1063,9 +1131,9 @@ struct MountDetailView: View {
                         .font(.title2)
                         .fontWeight(.semibold)
                         .foregroundColor(.secondary)
-                    
+
                     Spacer()
-                    
+
                     Text(mount.mountType)
                         .font(.subheadline)
                         .padding(.horizontal, 8)
@@ -1078,7 +1146,7 @@ struct MountDetailView: View {
         }
         .padding(16)
         .background(Color(NSColor.controlBackgroundColor))
-    
+
     }
 
     private func mountOverviewSection() -> some View {

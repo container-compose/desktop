@@ -599,6 +599,26 @@ class ContainerService: ObservableObject {
             print("Error removing container: \(error)")
         }
     }
+
+    func fetchContainerLogs(containerId: String) async throws -> String {
+        var result: ExecResult
+        do {
+            result = try exec(
+                program: "/usr/local/bin/container",
+                arguments: ["logs", containerId])
+        } catch {
+            let error = error as! ExecError
+            result = error.execResult
+        }
+
+        if let stdout = result.stdout {
+            return stdout
+        } else if let stderr = result.stderr {
+            throw NSError(domain: "ContainerService", code: 1, userInfo: [NSLocalizedDescriptionKey: stderr])
+        } else {
+            return ""
+        }
+    }
 }
 
 // MARK: - Type aliases for JSON decoding
