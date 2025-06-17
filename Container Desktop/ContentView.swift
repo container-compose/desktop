@@ -5,13 +5,13 @@
 //  Created by Andrew Waters on 16/06/2025.
 //
 
-import SwiftExec
 import SwiftUI
 
 struct ContentView: View {
     @EnvironmentObject var containerService: ContainerService
     @State private var selection: String?
     @State private var selectedContainer: String?
+    @State private var selectedImage: String?
     @State private var searchText: String = ""
     @State private var filterSelection: ContainerFilter = .all
 
@@ -63,6 +63,7 @@ struct ContentView: View {
         .task {
             await containerService.checkSystemStatus()
             await containerService.loadContainers()
+            await containerService.loadImages()
         }
     }
 
@@ -77,6 +78,7 @@ struct ContentView: View {
         .task {
             await containerService.checkSystemStatus()
             await containerService.loadContainers()
+            await containerService.loadImages()
         }
     }
 
@@ -132,13 +134,15 @@ struct ContentView: View {
         case "containers":
             containersList
         case "images":
-            Text("images list")
+            imagesList
         case "volumes":
             Text("volumes list")
         case "builds":
             Text("builds list")
         case "registry":
             Text("registry list")
+        case "system":
+            Text("system list")
         case .none:
             Text("select")
         case .some(_):
@@ -223,13 +227,67 @@ struct ContentView: View {
         return filtered
     }
 
+    private var imagesList: some View {
+        VStack(spacing: 0) {
+            // Title bar
+            VStack(spacing: 12) {
+                HStack {
+                    Text("Images")
+                        .font(.title2)
+                        .fontWeight(.semibold)
+                    Spacer()
+                }
+
+                HStack(spacing: 12) {
+                    // Search field
+                    HStack {
+                        SwiftUI.Image(systemName: "magnifyingglass")
+                            .foregroundColor(.secondary)
+                        TextField("Search images...", text: $searchText)
+                            .textFieldStyle(PlainTextFieldStyle())
+                    }
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 4)
+                    .background(Color(.controlBackgroundColor))
+                    .cornerRadius(6)
+                }
+            }
+            .padding()
+            .background(Color(.windowBackgroundColor))
+
+            Divider()
+
+            // Images list
+            List(selection: $selectedImage) {
+                ForEach(filteredImages, id: \.reference) { image in
+                    ContainerImageRow(image: image)
+                }
+            }
+            .listStyle(PlainListStyle())
+            .animation(.easeInOut(duration: 0.15), value: filteredImages.count)
+        }
+    }
+
+    private var filteredImages: [ContainerImage] {
+        var filtered = containerService.images
+
+        // Apply search filter
+        if !searchText.isEmpty {
+            filtered = filtered.filter { image in
+                image.reference.localizedCaseInsensitiveContains(searchText)
+            }
+        }
+
+        return filtered
+    }
+
     @ViewBuilder
     private var detailView: some View {
         switch selection {
         case "containers":
             containerDetailView
         case "images":
-            Text("image")
+            imageDetailView
         case "volumes":
             Text("volume")
         case "builds":
@@ -251,6 +309,15 @@ struct ContentView: View {
             if selectedContainer == container.configuration.id {
                 ContainerDetailView(container: container)
                     .environmentObject(containerService)
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var imageDetailView: some View {
+        ForEach(containerService.images, id: \.reference) { image in
+            if selectedImage == image.reference {
+                ContainerImageDetailView(image: image)
             }
         }
     }

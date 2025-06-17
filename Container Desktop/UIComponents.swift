@@ -3,6 +3,70 @@ import AppKit
 
 // MARK: - Container Components
 
+struct ContainerImageRow: View {
+    let image: ContainerImage
+
+    private var imageName: String {
+        // Extract the image name from the reference (e.g., "docker.io/library/alpine:3" -> "alpine")
+        let components = image.reference.split(separator: "/")
+        if let lastComponent = components.last {
+            return String(lastComponent.split(separator: ":").first ?? lastComponent)
+        }
+        return image.reference
+    }
+
+    private var imageTag: String {
+        // Extract the tag from the reference (e.g., "docker.io/library/alpine:3" -> "3")
+        if let tagComponent = image.reference.split(separator: ":").last,
+           tagComponent != image.reference.split(separator: "/").last {
+            return String(tagComponent)
+        }
+        return "latest"
+    }
+
+    var body: some View {
+        NavigationLink(value: image.reference) {
+            HStack {
+                SwiftUI.Image(systemName: "square.stack.3d.up")
+                    .foregroundColor(.green)
+                    .frame(width: 16, height: 16)
+
+                VStack(alignment: .leading) {
+                    Text(imageName)
+                        .font(.headline)
+                    HStack {
+                        Text(imageTag)
+                            .font(.subheadline)
+                            .foregroundColor(.secondary)
+                        Spacer()
+                        Text(ByteCountFormatter().string(fromByteCount: Int64(image.descriptor.size)))
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+                }
+            }
+        }
+        .padding(8)
+        .contextMenu {
+            Button {
+                let pasteboard = NSPasteboard.general
+                pasteboard.clearContents()
+                pasteboard.setString(image.reference, forType: .string)
+            } label: {
+                Label("Copy Reference", systemImage: "doc.on.doc")
+            }
+
+            Button {
+                let pasteboard = NSPasteboard.general
+                pasteboard.clearContents()
+                pasteboard.setString(image.descriptor.digest, forType: .string)
+            } label: {
+                Label("Copy Digest", systemImage: "number")
+            }
+        }
+    }
+}
+
 struct ContainerRow: View {
     let container: Container
     let isLoading: Bool

@@ -183,3 +183,31 @@ struct Platform: Codable, Equatable {
         case architecture
     }
 }
+
+// MARK: - Container Image Models
+
+struct ContainerImage: Codable, Equatable, Identifiable {
+    let descriptor: ContainerImageDescriptor
+    let reference: String
+
+    var id: String { reference }
+
+    enum CodingKeys: String, CodingKey {
+        case descriptor
+        case reference
+    }
+}
+
+struct ContainerImageDescriptor: Codable, Equatable {
+    let digest: String
+    let mediaType: String
+    let size: Int
+    let annotations: [String: String]?
+
+    enum CodingKeys: String, CodingKey {
+        case digest
+        case mediaType
+        case size
+        case annotations
+    }
+}

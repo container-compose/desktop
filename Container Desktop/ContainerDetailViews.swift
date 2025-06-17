@@ -154,10 +154,11 @@ struct ContainerDetailView: View {
             if !container.networks.isEmpty {
                 ForEach(container.networks, id: \.hostname) { network in
                     VStack(alignment: .leading, spacing: 8) {
+                        let addressValue = network.address.replacingOccurrences(of: "/24", with: "")
                         CopyableInfoRow(
                             label: "Address",
                             value: network.address,
-                            copyValue: network.address.replacingOccurrences(of: "/24", with: "")
+                            copyValue: addressValue
                         )
                         InfoRow(label: "Gateway", value: network.gateway)
                         InfoRow(label: "Network", value: network.network)
@@ -327,5 +328,206 @@ struct ContainerDetailView: View {
                     .italic()
             }
         }
+    }
+}
+
+// MARK: - Container Image Detail View
+
+struct ContainerImageDetailView: View {
+    let image: ContainerImage
+
+    private var imageName: String {
+        let components = image.reference.split(separator: "/")
+        if let lastComponent = components.last {
+            return String(lastComponent.split(separator: ":").first ?? lastComponent)
+        }
+        return image.reference
+    }
+
+    private var imageTag: String {
+        if let tagComponent = image.reference.split(separator: ":").last,
+           tagComponent != image.reference.split(separator: "/").last {
+            return String(tagComponent)
+        }
+        return "latest"
+    }
+
+    private var createdDate: String? {
+        image.descriptor.annotations?["org.opencontainers.image.created"]
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            // Title bar
+            HStack {
+                Text("Image Details")
+                    .font(.title2)
+                    .fontWeight(.semibold)
+                Spacer()
+            }
+            .padding()
+            .background(Color(.windowBackgroundColor))
+
+            Divider()
+
+            // Header
+            imageHeader()
+
+            Divider()
+
+            // Scrollable content
+            ScrollView {
+                VStack(alignment: .leading, spacing: 20) {
+                    // Overview section
+                    imageOverviewSection()
+
+                    Divider()
+
+                    // Technical details section
+                    imageTechnicalSection()
+
+                    if let annotations = image.descriptor.annotations, !annotations.isEmpty {
+                        Divider()
+
+                        // Annotations section
+                        imageAnnotationsSection(annotations: annotations)
+                    }
+
+                    Spacer(minLength: 20)
+                }
+                .padding()
+            }
+        }
+    }
+
+    // MARK: - Header Section
+
+    private func imageHeader() -> some View {
+        HStack {
+            VStack(alignment: .leading, spacing: 4) {
+                Text(imageName)
+                    .font(.title2)
+                    .fontWeight(.semibold)
+
+                HStack(spacing: 8) {
+                    SwiftUI.Image(systemName: "square.stack.3d.up")
+                        .foregroundColor(.green)
+                        .frame(width: 8, height: 8)
+                    Text(imageTag)
+                        .font(.subheadline)
+                        .foregroundColor(.secondary)
+                }
+            }
+
+            Spacer()
+
+            VStack(alignment: .trailing) {
+                Text(ByteCountFormatter().string(fromByteCount: Int64(image.descriptor.size)))
+                    .font(.headline)
+                    .foregroundColor(.primary)
+                if let created = createdDate {
+                    Text("Created: \(formatDate(created))")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
+            }
+        }
+        .padding()
+        .background(Color(NSColor.controlBackgroundColor))
+    }
+
+    // MARK: - Detail Sections
+
+    private func imageOverviewSection() -> some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Overview")
+                .font(.headline)
+                .foregroundColor(.primary)
+
+            VStack(alignment: .leading, spacing: 8) {
+                CopyableInfoRow(label: "Reference", value: image.reference)
+                InfoRow(label: "Name", value: imageName)
+                InfoRow(label: "Tag", value: imageTag)
+                InfoRow(label: "Size", value: ByteCountFormatter().string(fromByteCount: Int64(image.descriptor.size)))
+                if let created = createdDate {
+                    InfoRow(label: "Created", value: formatDate(created))
+                }
+            }
+        }
+    }
+
+    private func imageTechnicalSection() -> some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Technical Details")
+                .font(.headline)
+                .foregroundColor(.primary)
+
+            VStack(alignment: .leading, spacing: 8) {
+                InfoRow(label: "Media Type", value: image.descriptor.mediaType)
+                CopyableInfoRow(
+                    label: "Digest",
+                    value: String(image.descriptor.digest.replacingOccurrences(of: "sha256:", with: "").prefix(12)),
+                    copyValue: image.descriptor.digest
+                )
+                InfoRow(label: "Size (bytes)", value: "\(image.descriptor.size)")
+            }
+        }
+    }
+
+    private func imageAnnotationsSection(annotations: [String: String]) -> some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Annotations")
+                .font(.headline)
+                .foregroundColor(.primary)
+
+            ScrollView {
+                LazyVStack(alignment: .leading, spacing: 6) {
+                    ForEach(annotations.sorted(by: { $0.key < $1.key }), id: \.key) { key, value in
+                        HStack(alignment: .top) {
+                            Text(key)
+                                .font(.system(.subheadline, design: .monospaced))
+                                .foregroundColor(.primary)
+                                .frame(minWidth: 150, alignment: .leading)
+
+                            Text(value)
+                                .font(.system(.subheadline, design: .monospaced))
+                                .foregroundColor(.secondary)
+                                .textSelection(.enabled)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+
+                            Button {
+                                let pasteboard = NSPasteboard.general
+                                pasteboard.clearContents()
+                                pasteboard.setString(value, forType: .string)
+                            } label: {
+                                SwiftUI.Image(systemName: "doc.on.doc")
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
+                            }
+                            .buttonStyle(.plain)
+                            .help("Copy value")
+                        }
+                        .padding(.vertical, 2)
+                    }
+                }
+            }
+            .frame(maxHeight: 200)
+            .padding()
+            .background(Color(NSColor.controlBackgroundColor).opacity(0.5))
+            .cornerRadius(8)
+        }
+    }
+
+    // MARK: - Helper Methods
+
+    private func formatDate(_ dateString: String) -> String {
+        let formatter = ISO8601DateFormatter()
+        if let date = formatter.date(from: dateString) {
+            let displayFormatter = DateFormatter()
+            displayFormatter.dateStyle = .medium
+            displayFormatter.timeStyle = .short
+            return displayFormatter.string(from: date)
+        }
+        return dateString
     }
 }
