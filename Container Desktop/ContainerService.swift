@@ -537,6 +537,43 @@ class ContainerService: ObservableObject {
             print("Error deleting builder: \(error)")
         }
     }
+
+    func removeContainer(_ id: String) async {
+        await MainActor.run {
+            loadingContainers.insert(id)
+            errorMessage = nil
+        }
+
+        var result: ExecResult
+        do {
+            result = try exec(
+                program: "/usr/local/bin/container",
+                arguments: ["rm", id])
+
+            await MainActor.run {
+                if !result.failed {
+                    print("Container \(id) remove command sent successfully")
+                    // Remove from local array immediately
+                    self.containers.removeAll { $0.configuration.id == id }
+                    loadingContainers.remove(id)
+                } else {
+                    self.errorMessage =
+                        "Failed to remove container: \(result.stderr ?? "Unknown error")"
+                    loadingContainers.remove(id)
+                }
+            }
+
+        } catch {
+            let error = error as! ExecError
+            result = error.execResult
+
+            await MainActor.run {
+                loadingContainers.remove(id)
+                self.errorMessage = "Failed to remove container: \(error.localizedDescription)"
+            }
+            print("Error removing container: \(error)")
+        }
+    }
 }
 
 // MARK: - Type aliases for JSON decoding

@@ -54,7 +54,9 @@ struct MenuBarView: View {
                             // Container status
                             HStack {
                                 Circle()
-                                    .fill(container.status.lowercased() == "running" ? .green : .gray)
+                                    .fill(
+                                        container.status.lowercased() == "running" ? .green : .gray
+                                    )
                                     .frame(width: 8, height: 8)
                                 Text("Status: \(container.status)")
                             }
@@ -67,25 +69,37 @@ struct MenuBarView: View {
                                 Button("Copy IP Address") {
                                     let pasteboard = NSPasteboard.general
                                     pasteboard.clearContents()
-                                    let ipAddress = container.networks[0].address.replacingOccurrences(of: "/24", with: "")
+                                    let ipAddress = container.networks[0].address
+                                        .replacingOccurrences(of: "/24", with: "")
                                     pasteboard.setString(ipAddress, forType: .string)
                                 }
                             }
 
                             // Start/Stop container
-                            if containerService.loadingContainers.contains(container.configuration.id) {
+                            if containerService.loadingContainers.contains(
+                                container.configuration.id)
+                            {
                                 Text("Loading...")
                                     .foregroundColor(.gray)
                             } else if container.status.lowercased() == "running" {
                                 Button("Stop Container") {
                                     Task { @MainActor in
-                                        await containerService.stopContainer(container.configuration.id)
+                                        await containerService.stopContainer(
+                                            container.configuration.id)
                                     }
                                 }
                             } else {
                                 Button("Start Container") {
                                     Task { @MainActor in
-                                        await containerService.startContainer(container.configuration.id)
+                                        await containerService.startContainer(
+                                            container.configuration.id)
+                                    }
+                                }
+
+                                Button("Remove Container") {
+                                    Task { @MainActor in
+                                        await containerService.removeContainer(
+                                            container.configuration.id)
                                     }
                                 }
                             }
@@ -94,7 +108,9 @@ struct MenuBarView: View {
                                 Text(container.configuration.id)
                             } icon: {
                                 Circle()
-                                    .fill(container.status.lowercased() == "running" ? .green : .gray)
+                                    .fill(
+                                        container.status.lowercased() == "running" ? .green : .gray
+                                    )
                                     .frame(width: 8, height: 8)
                             }
                         }
@@ -135,12 +151,14 @@ struct MenuBarView: View {
         .task {
             await containerService.checkSystemStatus()
             await containerService.loadContainers()
+            await containerService.loadBuilders()
 
             // Set up periodic refresh
             refreshTimer = Timer.scheduledTimer(withTimeInterval: 5.0, repeats: true) { _ in
                 Task { @MainActor in
                     await containerService.checkSystemStatus()
                     await containerService.loadContainers()
+                    await containerService.loadBuilders()
                 }
             }
         }

@@ -189,6 +189,11 @@ struct ContentView: View {
                             Task { @MainActor in
                                 await containerService.startContainer(id)
                             }
+                        },
+                        removeContainer: { id in
+                            Task { @MainActor in
+                                await containerService.removeContainer(id)
+                            }
                         }
                     )
                 }

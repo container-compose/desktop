@@ -69,6 +69,23 @@ struct ContainerDetailView: View {
 
     private func containerHeader(container: Container) -> some View {
         HStack {
+            ContainerControlButton(
+                container: container,
+                isLoading: containerService.loadingContainers.contains(
+                    container.configuration.id),
+                onStart: {
+                    Task { @MainActor in
+                        await containerService.startContainer(container.configuration.id)
+                    }
+                },
+                onStop: {
+                    Task { @MainActor in
+                        await containerService.stopContainer(container.configuration.id)
+                    }
+                }
+            )
+            .padding(.horizontal, 16)
+
             VStack(alignment: .leading, spacing: 4) {
                 Text(container.configuration.id)
                     .font(.title2)
@@ -86,20 +103,20 @@ struct ContainerDetailView: View {
 
             Spacer()
 
-            ContainerControlButton(
-                container: container,
-                isLoading: containerService.loadingContainers.contains(container.configuration.id),
-                onStart: {
-                    Task { @MainActor in
-                        await containerService.startContainer(container.configuration.id)
-                    }
-                },
-                onStop: {
-                    Task { @MainActor in
-                        await containerService.stopContainer(container.configuration.id)
-                    }
+            HStack(spacing: 8) {
+                if container.status.lowercased() != "running" {
+                    ContainerRemoveButton(
+                        container: container,
+                        isLoading: containerService.loadingContainers.contains(
+                            container.configuration.id),
+                        onRemove: {
+                            Task { @MainActor in
+                                await containerService.removeContainer(container.configuration.id)
+                            }
+                        }
+                    )
                 }
-            )
+            }
         }
         .padding()
         .background(Color(NSColor.controlBackgroundColor))

@@ -75,6 +75,7 @@ struct ContainerRow: View {
     let isLoading: Bool
     let stopContainer: (String) -> Void
     let startContainer: (String) -> Void
+    let removeContainer: (String) -> Void
 
     private var networkAddress: String {
         guard !container.networks.isEmpty else {
@@ -120,6 +121,10 @@ struct ContainerRow: View {
             } else {
                 Button("Start Container") {
                     startContainer(container.configuration.id)
+                }
+
+                Button("Remove Container") {
+                    removeContainer(container.configuration.id)
                 }
             }
         }
@@ -201,9 +206,9 @@ struct ContainerControlButton: View {
 
         var color: Color {
             switch self {
-            case .start: return .blue
-            case .stop: return .red
-            case .loading: return .gray
+            case .start: return .gray
+            case .stop: return .gray
+            case .loading: return .white
             }
         }
     }
@@ -240,6 +245,30 @@ struct ContainerControlButton: View {
             )
             isRotating = (newState == .loading)
         }
+        .frame(width: 30, height: 30)
+    }
+}
+
+struct ContainerRemoveButton: View {
+    let container: Container
+    let isLoading: Bool
+    let onRemove: () -> Void
+
+    var body: some View {
+        Button {
+            onRemove()
+        } label: {
+            SwiftUI.Image(systemName: "trash.fill")
+                .font(.system(size: 16))
+                .foregroundColor(.gray)
+        }
+        .buttonStyle(.plain)
+        .disabled(isLoading || container.status.lowercased() == "running")
+        .help("Remove Container")
+        .modifier(
+            CursorModifier(
+                cursor: (isLoading || container.status.lowercased() == "running")
+                    ? .arrow : .pointingHand))
     }
 }
 
