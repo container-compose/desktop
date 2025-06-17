@@ -249,20 +249,29 @@ struct ContentView: View {
 
     private var emptyStateView: some View {
         VStack(spacing: 20) {
-            SwiftUI.Image(systemName: "power")
-                .font(SwiftUI.Font.system(size: 60))
-                .foregroundColor(SwiftUI.Color.gray)
+            Button {
+                Task { @MainActor in
+                    await containerService.startSystem()
+                }
+            } label: {
+                
+                SwiftUI.Image(systemName: "power")
+                    .font(SwiftUI.Font.system(size: 60))
+                    .foregroundColor(containerService.isSystemLoading ? SwiftUI.Color.white : SwiftUI.Color.gray)
+                .padding()
+                .background(Color(NSColor.controlBackgroundColor))
+                .cornerRadius(8)
+                
+                
+            }
+            .buttonStyle(.plain)
+            .disabled(containerService.isSystemLoading)
+            .help("Click to start the container system")
+            
 
-            Text("Container System is Stopped")
+            Text("Container is not currently runnning")
                 .font(.title2)
                 .fontWeight(.medium)
-
-            Text("Start the container system to view and manage containers")
-                .font(.body)
-                .foregroundColor(.secondary)
-                .multilineTextAlignment(.center)
-
-            systemStatusCard
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .padding()
@@ -270,40 +279,6 @@ struct ContentView: View {
             await containerService.checkSystemStatus()
             await containerService.loadContainers()
         }
-    }
-
-    private var systemStatusCard: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            HStack {
-                Circle()
-                    .fill(containerService.systemStatus.color)
-                    .frame(width: 8, height: 8)
-                Text("System: \(containerService.systemStatus.text)")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-            }
-
-            HStack(spacing: 8) {
-                Button("Start System") {
-                    Task { @MainActor in
-                        await containerService.startSystem()
-                    }
-                }
-                .buttonStyle(.borderedProminent)
-                .disabled(containerService.isSystemLoading)
-
-                Button("Check Status") {
-                    Task { @MainActor in
-                        await containerService.checkSystemStatus()
-                    }
-                }
-                .buttonStyle(.bordered)
-                .disabled(containerService.isSystemLoading)
-            }
-        }
-        .padding()
-        .background(Color(NSColor.controlBackgroundColor))
-        .cornerRadius(8)
     }
 
     private var mainInterfaceView: some View {
