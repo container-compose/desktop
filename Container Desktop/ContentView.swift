@@ -351,6 +351,14 @@ struct ContentView: View {
     @EnvironmentObject var containerService: ContainerService
     @State private var selection: String?
     @State private var selectedContainer: String?
+    @State private var searchText: String = ""
+    @State private var filterSelection: ContainerFilter = .all
+
+    enum ContainerFilter: String, CaseIterable {
+        case all = "All"
+        case running = "Running"
+        case stopped = "Stopped"
+    }
 
     var body: some View {
         Group {
@@ -483,9 +491,36 @@ struct ContentView: View {
     }
 
     private var containersList: some View {
-        VStack {
+        VStack(spacing: 0) {
+            // Title bar
+            VStack(spacing: 12) {
+                    // Filter picker
+                    Picker("", selection: $filterSelection) {
+                        ForEach(ContainerFilter.allCases, id: \.self) { filter in
+                            Text(filter.rawValue).tag(filter)
+                        }
+                    }
+                    .pickerStyle(SegmentedPickerStyle())
+            }
+            .padding()
+            .background(Color(.windowBackgroundColor))
+
+            // Search field
+            HStack {
+                SwiftUI.Image(systemName: "magnifyingglass")
+                    .foregroundColor(.secondary)
+                TextField("Filter by name...", text: $searchText)
+                    .textFieldStyle(PlainTextFieldStyle())
+            }
+            .padding(.horizontal, 14)
+            .padding(.vertical, 8)
+            .background(Color(.black))
+
+            Divider()
+
+            // Container list
             List(selection: $selectedContainer) {
-                ForEach(containerService.containers, id: \.configuration.id) { container in
+                ForEach(filteredContainers, id: \.configuration.id) { container in
                     ContainerRow(
                         container: container,
                         isLoading: containerService.loadingContainers.contains(container.configuration.id),
@@ -500,11 +535,36 @@ struct ContentView: View {
                             }
                         }
                     )
-                    .transition(.opacity.combined(with: .scale(scale: 0.95)))
                 }
             }
-            .animation(.easeInOut(duration: 0.3), value: containerService.containers.count)
+            .listStyle(PlainListStyle())
+            .animation(.easeInOut(duration: 0.15), value: filteredContainers.count)
+
         }
+    }
+
+    private var filteredContainers: [Container] {
+        var filtered = containerService.containers
+
+        // Apply status filter
+        switch filterSelection {
+        case .all:
+            break
+        case .running:
+            filtered = filtered.filter { $0.status.lowercased() == "running" }
+        case .stopped:
+            filtered = filtered.filter { $0.status.lowercased() != "running" }
+        }
+
+        // Apply search filter
+        if !searchText.isEmpty {
+            filtered = filtered.filter { container in
+                container.configuration.id.localizedCaseInsensitiveContains(searchText) ||
+                container.status.localizedCaseInsensitiveContains(searchText)
+            }
+        }
+
+        return filtered
     }
 
     @ViewBuilder
@@ -534,6 +594,18 @@ struct ContentView: View {
         ForEach(containerService.containers, id: \.configuration.id) { container in
             if selectedContainer == container.configuration.id {
                 VStack(alignment: .leading, spacing: 0) {
+                    // Title bar
+                    HStack {
+                        Text("Container Details")
+                            .font(.title2)
+                            .fontWeight(.semibold)
+                        Spacer()
+                    }
+                    .padding()
+                    .background(Color(.windowBackgroundColor))
+
+                    Divider()
+
                     // Header with controls
                     containerHeader(container: container)
 
