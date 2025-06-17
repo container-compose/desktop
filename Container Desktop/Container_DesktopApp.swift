@@ -73,8 +73,6 @@ struct MenuBarView: View {
             // Container Controls
             if !containerService.containers.isEmpty {
                 Text("Containers (\(containerService.containers.count))")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
 
                 ForEach(containerService.containers.prefix(5), id: \.configuration.id) { container in
                     HStack {
@@ -83,16 +81,20 @@ struct MenuBarView: View {
                             .frame(width: 6, height: 6)
                         Text(container.configuration.hostname ?? "Unknown")
                             .font(.caption)
-                        Spacer()
-                        if container.status == "running" {
-                            Button("Stop") {
+                        MenuBarContainerButton(
+                            container: container,
+                            isLoading: containerService.loadingContainers.contains(container.configuration.id),
+                            onStart: {
+                                Task { @MainActor in
+                                    await containerService.startContainer(container.configuration.id)
+                                }
+                            },
+                            onStop: {
                                 Task { @MainActor in
                                     await containerService.stopContainer(container.configuration.id)
                                 }
                             }
-                            .buttonStyle(.borderless)
-                            .font(.caption2)
-                        }
+                        )
                     }
                 }
 
@@ -135,5 +137,51 @@ struct MenuBarView: View {
             refreshTimer?.invalidate()
             refreshTimer = nil
         }
+    }
+}
+
+struct MenuBarContainerButton: View {
+    let container: Container
+    let isLoading: Bool
+    let onStart: () -> Void
+    let onStop: () -> Void
+
+    private var buttonState: ButtonState {
+        if isLoading {
+            return .loading
+        } else if container.status == "running" {
+            return .stop
+        } else {
+            return .start
+        }
+    }
+
+    private enum ButtonState {
+        case start, stop, loading
+        var text: String {
+            switch self {
+            case .start: return "Start Container"
+            case .stop: return "Stop Container"
+            case .loading: return "Loading..."
+            }
+        }
+    }
+
+    var body: some View {
+        Button {
+            switch buttonState {
+            case .start:
+                onStart()
+            case .stop:
+                onStop()
+            case .loading:
+                break
+            }
+        } label: {
+            Text(buttonState.text)
+                .font(.caption2)
+        }
+        .buttonStyle(.plain)
+        .disabled(buttonState == .loading)
     }
 }

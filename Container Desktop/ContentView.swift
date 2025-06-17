@@ -15,6 +15,7 @@ class ContainerService: ObservableObject {
     @Published var errorMessage: String?
     @Published var systemStatus: SystemStatus = .unknown
     @Published var isSystemLoading: Bool = false
+    @Published var loadingContainers: Set<String> = []
 
     enum SystemStatus {
         case unknown
@@ -74,7 +75,7 @@ class ContainerService: ObservableObject {
             }
 
             for container in newContainers {
-                print(container)
+                print("Container: \(container.configuration.id), Status: \(container.status)")
             }
         } catch {
             await MainActor.run {
@@ -91,7 +92,7 @@ class ContainerService: ObservableObject {
 
     func stopContainer(_ id: String) async {
         await MainActor.run {
-            isLoading = true
+            loadingContainers.insert(id)
             errorMessage = nil
         }
 
@@ -102,20 +103,25 @@ class ContainerService: ObservableObject {
                 arguments: ["stop", id])
 
             await MainActor.run {
-                self.isLoading = false
+                if !result.failed {
+                    print("Container \(id) stop command sent successfully")
+                    // Keep loading state and refresh containers to check status
+                    Task {
+                        await refreshUntilContainerStopped(id)
+                    }
+                } else {
+                    self.errorMessage = "Failed to stop container: \(result.stderr ?? "Unknown error")"
+                    loadingContainers.remove(id)
+                }
             }
-
-            print("Container \(id) stopped successfully")
-            // Reload containers to refresh the status
-            await loadContainers()
 
         } catch {
             let error = error as! ExecError
             result = error.execResult
 
             await MainActor.run {
+                loadingContainers.remove(id)
                 self.errorMessage = "Failed to stop container: \(error.localizedDescription)"
-                self.isLoading = false
             }
             print("Error stopping container: \(error)")
         }
@@ -237,7 +243,107 @@ class ContainerService: ObservableObject {
 
     // Future commands can be added here
     func startContainer(_ id: String) async {
-        // Implementation for starting a container
+        await MainActor.run {
+            loadingContainers.insert(id)
+            errorMessage = nil
+        }
+
+        var result: ExecResult
+        do {
+            result = try exec(
+                program: "/usr/local/bin/container",
+                arguments: ["start", id])
+        } catch {
+            let error = error as! ExecError
+            result = error.execResult
+        }
+
+        await MainActor.run {
+            if !result.failed {
+                print("Container \(id) start command sent successfully")
+                // Keep loading state and refresh containers to check status
+                Task {
+                    await refreshUntilContainerStarted(id)
+                }
+            } else {
+                self.errorMessage = "Failed to start container: \(result.stderr ?? "Unknown error")"
+                loadingContainers.remove(id)
+            }
+        }
+    }
+
+    private func refreshUntilContainerStopped(_ id: String) async {
+        var attempts = 0
+        let maxAttempts = 10
+
+        while attempts < maxAttempts {
+            await loadContainers()
+
+            // Check if container is now stopped
+            let shouldStop = await MainActor.run {
+                if let container = containers.first(where: { $0.configuration.id == id }) {
+                    print("Checking stop status for \(id): \(container.status)")
+                    return container.status.lowercased() != "running"
+                } else {
+                    print("Container \(id) not found, assuming stopped")
+                    return true // Container not found, assume it stopped
+                }
+            }
+
+            if shouldStop {
+                await MainActor.run {
+                    print("Container \(id) has stopped, removing loading state")
+                    loadingContainers.remove(id)
+                }
+                return
+            }
+
+            attempts += 1
+            print("Container \(id) still running, attempt \(attempts)/\(maxAttempts)")
+            try? await Task.sleep(nanoseconds: 500_000_000) // 0.5 seconds
+        }
+
+        // Timeout reached, remove loading state
+        await MainActor.run {
+            print("Timeout reached for container \(id), removing loading state")
+            loadingContainers.remove(id)
+        }
+    }
+
+    private func refreshUntilContainerStarted(_ id: String) async {
+        var attempts = 0
+        let maxAttempts = 10
+
+        while attempts < maxAttempts {
+            await loadContainers()
+
+            // Check if container is now running
+            let isRunning = await MainActor.run {
+                if let container = containers.first(where: { $0.configuration.id == id }) {
+                    print("Checking start status for \(id): \(container.status)")
+                    return container.status.lowercased() == "running"
+                }
+                return false
+            }
+
+            if isRunning {
+                await MainActor.run {
+                    print("Container \(id) has started, removing loading state")
+                    loadingContainers.remove(id)
+                }
+                return
+            }
+
+            attempts += 1
+            print("Container \(id) not running yet, attempt \(attempts)/\(maxAttempts)")
+            try? await Task.sleep(nanoseconds: 500_000_000) // 0.5 seconds
+        }
+
+        // Timeout reached, remove loading state
+        await MainActor.run {
+            print("Timeout reached for container \(id), removing loading state")
+            loadingContainers.remove(id)
+        }
     }
 }
 
@@ -337,17 +443,6 @@ struct ContentView: View {
             }
 
             HStack(spacing: 4) {
-                Button("Start") {
-                    Task { @MainActor in
-                        await containerService.startSystem()
-                    }
-                }
-                .buttonStyle(.borderless)
-                .font(.caption)
-                .disabled(
-                    containerService.isSystemLoading
-                        || containerService.systemStatus == .running)
-
                 Button("Stop") {
                     Task { @MainActor in
                         await containerService.stopSystem()
@@ -403,10 +498,15 @@ struct ContentView: View {
                 ForEach(containerService.containers, id: \.configuration.id) { container in
                     ContainerRow(
                         container: container,
-                        isLoading: containerService.isLoading,
+                        isLoading: containerService.loadingContainers.contains(container.configuration.id),
                         stopContainer: { id in
                             Task { @MainActor in
                                 await containerService.stopContainer(id)
+                            }
+                        },
+                        startContainer: { id in
+                            Task { @MainActor in
+                                await containerService.startContainer(id)
                             }
                         }
                     )
@@ -447,22 +547,6 @@ struct ContentView: View {
                     VStack(alignment: .leading) {
                         containerInfoGrid(container: container)
 
-                        HStack {
-                            Button {
-                                Task { @MainActor in
-                                    await containerService.stopContainer(
-                                        container.configuration.id)
-                                }
-                            } label: {
-                                Label("Stop Container", systemImage: "stop.fill")
-                            }
-                            .disabled(
-                                containerService.isLoading || container.status != "running")
-
-                            Spacer()
-                        }
-                        .padding()
-
                         Divider()
 
                         containerProcessInfo(container: container)
@@ -480,6 +564,28 @@ struct ContentView: View {
 
     private func containerInfoGrid(container: Container) -> some View {
         HStack(alignment: .top) {
+            
+            HStack {
+                ContainerControlButton(
+                    container: container,
+                    isLoading: containerService.loadingContainers.contains(container.configuration.id),
+                    onStart: {
+                        Task { @MainActor in
+                            await containerService.startContainer(container.configuration.id)
+                        }
+                    },
+                    onStop: {
+                        Task { @MainActor in
+                            await containerService.stopContainer(container.configuration.id)
+                        }
+                    }
+                )
+                
+                Spacer()
+            }
+            .padding()
+
+            
             VStack(alignment: .leading) {
                 Text(container.configuration.id)
                 Text(
@@ -572,6 +678,7 @@ struct ContainerRow: View {
     let container: Container
     let isLoading: Bool
     let stopContainer: (String) -> Void
+    let startContainer: (String) -> Void
 
     private var networkAddress: String {
         guard !container.networks.isEmpty else {
@@ -601,12 +708,12 @@ struct ContainerRow: View {
                 }
             }
 
-            Button {
-                stopContainer(container.configuration.id)
-            } label: {
-                Label("Stop Container", systemImage: "stop.fill")
-            }
-            .disabled(isLoading || container.status != "running")
+            ContainerControlButton(
+                container: container,
+                isLoading: isLoading,
+                onStart: { startContainer(container.configuration.id) },
+                onStop: { stopContainer(container.configuration.id) }
+            )
         }
     }
 }
@@ -644,6 +751,87 @@ struct PowerButton: View {
         }
     }
 }
+
+struct ContainerControlButton: View {
+    let container: Container
+    let isLoading: Bool
+    let onStart: () -> Void
+    let onStop: () -> Void
+
+    private var buttonState: ButtonState {
+        if isLoading {
+            return .loading
+        } else if container.status.lowercased() == "running" {
+            return .stop
+        } else {
+            return .start
+        }
+    }
+
+    @State private var isRotating: Bool = false
+
+    private enum ButtonState {
+        case start, stop, loading
+
+        var icon: String {
+            switch self {
+            case .start: return "play.fill"
+            case .stop: return "stop.fill"
+            case .loading: return "arrow.2.circlepath"
+            }
+        }
+
+        var helpText: String {
+            switch self {
+            case .start: return "Start Container"
+            case .stop: return "Stop Container"
+            case .loading: return "Loading..."
+            }
+        }
+
+        var color: SwiftUI.Color {
+            switch self {
+            case .start: return .blue
+            case .stop: return .red
+            case .loading: return .gray
+            }
+        }
+    }
+
+    var body: some View {
+        Button {
+            switch buttonState {
+            case .start:
+                onStart()
+            case .stop:
+                onStop()
+            case .loading:
+                break // No action when loading
+            }
+        } label: {
+            SwiftUI.Image(systemName: buttonState.icon)
+                .font(.system(size: 20))
+                .foregroundColor(buttonState.color)
+                .rotationEffect(.degrees(isRotating ? 360 : 0))
+                .animation(
+                    buttonState == .loading
+                        ? .linear(duration: 1.0).repeatForever(autoreverses: false)
+                        : .default,
+                    value: isRotating
+                )
+        }
+        .buttonStyle(.plain)
+        .disabled(buttonState == .loading)
+        .help(buttonState.helpText)
+        .modifier(CursorModifier(cursor: buttonState == .loading ? .arrow : .pointingHand))
+        .onChange(of: buttonState) { _, newState in
+            print("Container \(container.configuration.id) state changed to: \(newState), status: \(container.status), isLoading: \(isLoading)")
+            isRotating = (newState == .loading)
+        }
+    }
+}
+
+
 
 struct CursorModifier: ViewModifier {
     let cursor: NSCursor
