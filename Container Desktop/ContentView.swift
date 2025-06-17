@@ -411,39 +411,15 @@ struct ContentView: View {
         VStack {
             List(selection: $selectedContainer) {
                 ForEach(containerService.containers, id: \.configuration.id) { container in
-                    NavigationLink(value: container.configuration.id) {
-                        VStack(alignment: .leading) {
-                            Text(container.configuration.hostname ?? "Unknown")
-                                .badge(container.status)
-                            Text(
-                                container.networks[0].address.replacingOccurrences(
-                                    of: "/24", with: "")
-                            )
-                            .font(.subheadline).monospaced()
-                        }
-                    }
-                    .contextMenu {
-                        Button {
-                            let pasteboard = NSPasteboard.general
-                            pasteboard.clearContents()
-                            pasteboard.setString(
-                                container.networks[0].address.replacingOccurrences(
-                                    of: "/24", with: ""), forType: .string)
-                        } label: {
-                            Label("Copy IP address", systemImage: "network")
-                        }
-
-                        Button {
+                    ContainerRow(
+                        container: container,
+                        isLoading: containerService.isLoading,
+                        stopContainer: { id in
                             Task { @MainActor in
-                                await containerService.stopContainer(
-                                    container.configuration.id)
+                                await containerService.stopContainer(id)
                             }
-                        } label: {
-                            Label("Stop Container", systemImage: "stop.fill")
                         }
-                        .disabled(
-                            containerService.isLoading || container.status != "running")
-                    }
+                    )
                 }
             }
         }
@@ -596,6 +572,49 @@ struct ContentView: View {
                 "GID: " + String(container.configuration.initProcess.user.id?.gid ?? 0))
             Text(
                 "UID: " + String(container.configuration.initProcess.user.id?.uid ?? 0))
+        }
+    }
+}
+
+struct ContainerRow: View {
+    let container: Container
+    let isLoading: Bool
+    let stopContainer: (String) -> Void
+
+    private var networkAddress: String {
+        guard !container.networks.isEmpty else {
+            return "No network"
+        }
+        return container.networks[0].address.replacingOccurrences(of: "/24", with: "")
+    }
+
+    var body: some View {
+        NavigationLink(value: container.configuration.id) {
+            VStack(alignment: .leading) {
+                Text(container.configuration.hostname ?? "Unknown")
+                    .badge(container.status)
+                Text(networkAddress)
+                    .font(.subheadline)
+                    .monospaced()
+            }
+        }
+        .contextMenu {
+            if !container.networks.isEmpty {
+                Button {
+                    let pasteboard = NSPasteboard.general
+                    pasteboard.clearContents()
+                    pasteboard.setString(networkAddress, forType: .string)
+                } label: {
+                    Label("Copy IP address", systemImage: "network")
+                }
+            }
+
+            Button {
+                stopContainer(container.configuration.id)
+            } label: {
+                Label("Stop Container", systemImage: "stop.fill")
+            }
+            .disabled(isLoading || container.status != "running")
         }
     }
 }
