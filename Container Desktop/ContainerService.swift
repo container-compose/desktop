@@ -1,6 +1,6 @@
 import Foundation
-import SwiftUI
 import SwiftExec
+import SwiftUI
 
 class ContainerService: ObservableObject {
     @Published var containers: [Container] = []
@@ -13,6 +13,7 @@ class ContainerService: ObservableObject {
     @Published var systemStatus: SystemStatus = .unknown
     @Published var isSystemLoading: Bool = false
     @Published var loadingContainers: Set<String> = []
+    @Published var isBuilderLoading: Bool = false
 
     enum SystemStatus {
         case unknown
@@ -154,10 +155,11 @@ class ContainerService: ObservableObject {
             print("Builder: \(newBuilder.configuration.id), Status: \(newBuilder.status)")
         } catch {
             await MainActor.run {
-                self.errorMessage = error.localizedDescription
+                // If no builder exists, set empty array
+                self.builders = []
                 self.isBuildersLoading = false
             }
-            print(error)
+            print("No builder found or error loading builder: \(error)")
         }
     }
 
@@ -185,7 +187,8 @@ class ContainerService: ObservableObject {
                         await refreshUntilContainerStopped(id)
                     }
                 } else {
-                    self.errorMessage = "Failed to stop container: \(result.stderr ?? "Unknown error")"
+                    self.errorMessage =
+                        "Failed to stop container: \(result.stderr ?? "Unknown error")"
                     loadingContainers.remove(id)
                 }
             }
@@ -360,7 +363,7 @@ class ContainerService: ObservableObject {
                     return container.status.lowercased() != "running"
                 } else {
                     print("Container \(id) not found, assuming stopped")
-                    return true // Container not found, assume it stopped
+                    return true  // Container not found, assume it stopped
                 }
             }
 
@@ -374,7 +377,7 @@ class ContainerService: ObservableObject {
 
             attempts += 1
             print("Container \(id) still running, attempt \(attempts)/\(maxAttempts)")
-            try? await Task.sleep(nanoseconds: 500_000_000) // 0.5 seconds
+            try? await Task.sleep(nanoseconds: 500_000_000)  // 0.5 seconds
         }
 
         // Timeout reached, remove loading state
@@ -410,13 +413,128 @@ class ContainerService: ObservableObject {
 
             attempts += 1
             print("Container \(id) not running yet, attempt \(attempts)/\(maxAttempts)")
-            try? await Task.sleep(nanoseconds: 500_000_000) // 0.5 seconds
+            try? await Task.sleep(nanoseconds: 500_000_000)  // 0.5 seconds
         }
 
         // Timeout reached, remove loading state
         await MainActor.run {
             print("Timeout reached for container \(id), removing loading state")
             loadingContainers.remove(id)
+        }
+    }
+
+    func startBuilder() async {
+        await MainActor.run {
+            isBuilderLoading = true
+            errorMessage = nil
+        }
+
+        var result: ExecResult
+        do {
+            result = try exec(
+                program: "/usr/local/bin/container",
+                arguments: ["builder", "start"])
+
+            await MainActor.run {
+                if !result.failed {
+                    print("Builder start command sent successfully")
+                    self.isBuilderLoading = false
+                    // Refresh builder status
+                    Task {
+                        await loadBuilders()
+                    }
+                } else {
+                    self.errorMessage =
+                        "Failed to start builder: \(result.stderr ?? "Unknown error")"
+                    self.isBuilderLoading = false
+                }
+            }
+
+        } catch {
+            let error = error as! ExecError
+            result = error.execResult
+
+            await MainActor.run {
+                self.isBuilderLoading = false
+                self.errorMessage = "Failed to start builder: \(error.localizedDescription)"
+            }
+            print("Error starting builder: \(error)")
+        }
+    }
+
+    func stopBuilder() async {
+        await MainActor.run {
+            isBuilderLoading = true
+            errorMessage = nil
+        }
+
+        var result: ExecResult
+        do {
+            result = try exec(
+                program: "/usr/local/bin/container",
+                arguments: ["builder", "stop"])
+
+            await MainActor.run {
+                if !result.failed {
+                    print("Builder stop command sent successfully")
+                    self.isBuilderLoading = false
+                    // Refresh builder status
+                    Task {
+                        await loadBuilders()
+                    }
+                } else {
+                    self.errorMessage =
+                        "Failed to stop builder: \(result.stderr ?? "Unknown error")"
+                    self.isBuilderLoading = false
+                }
+            }
+
+        } catch {
+            let error = error as! ExecError
+            result = error.execResult
+
+            await MainActor.run {
+                self.isBuilderLoading = false
+                self.errorMessage = "Failed to stop builder: \(error.localizedDescription)"
+            }
+            print("Error stopping builder: \(error)")
+        }
+    }
+
+    func deleteBuilder() async {
+        await MainActor.run {
+            isBuilderLoading = true
+            errorMessage = nil
+        }
+
+        var result: ExecResult
+        do {
+            result = try exec(
+                program: "/usr/local/bin/container",
+                arguments: ["builder", "delete"])
+
+            await MainActor.run {
+                if !result.failed {
+                    print("Builder delete command sent successfully")
+                    self.isBuilderLoading = false
+                    // Clear builders array since it was deleted
+                    self.builders = []
+                } else {
+                    self.errorMessage =
+                        "Failed to delete builder: \(result.stderr ?? "Unknown error")"
+                    self.isBuilderLoading = false
+                }
+            }
+
+        } catch {
+            let error = error as! ExecError
+            result = error.execResult
+
+            await MainActor.run {
+                self.isBuilderLoading = false
+                self.errorMessage = "Failed to delete builder: \(error.localizedDescription)"
+            }
+            print("Error deleting builder: \(error)")
         }
     }
 }

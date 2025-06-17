@@ -1,5 +1,5 @@
-import SwiftUI
 import AppKit
+import SwiftUI
 
 // MARK: - Container Detail Views
 
@@ -116,7 +116,11 @@ struct ContainerDetailView: View {
             VStack(alignment: .leading, spacing: 8) {
                 CopyableInfoRow(label: "Container ID", value: container.configuration.id)
                 InfoRow(label: "Runtime", value: container.configuration.runtimeHandler)
-                InfoRow(label: "Platform", value: "\(container.configuration.platform.os)/\(container.configuration.platform.architecture)")
+                InfoRow(
+                    label: "Platform",
+                    value:
+                        "\(container.configuration.platform.os)/\(container.configuration.platform.architecture)"
+                )
                 if let hostname = container.configuration.hostname {
                     InfoRow(label: "Hostname", value: hostname)
                 }
@@ -133,13 +137,20 @@ struct ContainerDetailView: View {
 
             VStack(alignment: .leading, spacing: 8) {
                 InfoRow(label: "Reference", value: container.configuration.image.reference)
-                InfoRow(label: "Media Type", value: container.configuration.image.descriptor.mediaType)
+                InfoRow(
+                    label: "Media Type", value: container.configuration.image.descriptor.mediaType)
                 CopyableInfoRow(
                     label: "Digest",
-                    value: String(container.configuration.image.descriptor.digest.replacingOccurrences(of: "sha256:", with: "").prefix(12)),
+                    value: String(
+                        container.configuration.image.descriptor.digest.replacingOccurrences(
+                            of: "sha256:", with: ""
+                        ).prefix(12)),
                     copyValue: container.configuration.image.descriptor.digest
                 )
-                InfoRow(label: "Size", value: ByteCountFormatter().string(fromByteCount: Int64(container.configuration.image.descriptor.size)))
+                InfoRow(
+                    label: "Size",
+                    value: ByteCountFormatter().string(
+                        fromByteCount: Int64(container.configuration.image.descriptor.size)))
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -172,20 +183,30 @@ struct ContainerDetailView: View {
                 }
 
                 // DNS Configuration
-                if !container.configuration.dns.nameservers.isEmpty || !container.configuration.dns.searchDomains.isEmpty {
+                if !container.configuration.dns.nameservers.isEmpty
+                    || !container.configuration.dns.searchDomains.isEmpty
+                {
                     VStack(alignment: .leading, spacing: 8) {
                         Text("DNS Configuration")
                             .font(.subheadline)
                             .fontWeight(.medium)
 
                         if !container.configuration.dns.nameservers.isEmpty {
-                            InfoRow(label: "Nameservers", value: container.configuration.dns.nameservers.joined(separator: ", "))
+                            InfoRow(
+                                label: "Nameservers",
+                                value: container.configuration.dns.nameservers.joined(
+                                    separator: ", "))
                         }
                         if !container.configuration.dns.searchDomains.isEmpty {
-                            InfoRow(label: "Search Domains", value: container.configuration.dns.searchDomains.joined(separator: ", "))
+                            InfoRow(
+                                label: "Search Domains",
+                                value: container.configuration.dns.searchDomains.joined(
+                                    separator: ", "))
                         }
                         if !container.configuration.dns.options.isEmpty {
-                            InfoRow(label: "Options", value: container.configuration.dns.options.joined(separator: ", "))
+                            InfoRow(
+                                label: "Options",
+                                value: container.configuration.dns.options.joined(separator: ", "))
                         }
                     }
                 }
@@ -205,8 +226,13 @@ struct ContainerDetailView: View {
 
             VStack(alignment: .leading, spacing: 8) {
                 InfoRow(label: "CPUs", value: "\(container.configuration.resources.cpus)")
-                InfoRow(label: "Memory", value: ByteCountFormatter().string(fromByteCount: Int64(container.configuration.resources.memoryInBytes)))
-                InfoRow(label: "Rosetta", value: container.configuration.rosetta ? "Enabled" : "Disabled")
+                InfoRow(
+                    label: "Memory",
+                    value: ByteCountFormatter().string(
+                        fromByteCount: Int64(container.configuration.resources.memoryInBytes)))
+                InfoRow(
+                    label: "Rosetta",
+                    value: container.configuration.rosetta ? "Enabled" : "Disabled")
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -220,11 +246,17 @@ struct ContainerDetailView: View {
 
             VStack(alignment: .leading, spacing: 8) {
                 InfoRow(label: "Executable", value: container.configuration.initProcess.executable)
-                InfoRow(label: "Working Directory", value: container.configuration.initProcess.workingDirectory)
-                InfoRow(label: "Terminal", value: container.configuration.initProcess.terminal ? "Enabled" : "Disabled")
+                InfoRow(
+                    label: "Working Directory",
+                    value: container.configuration.initProcess.workingDirectory)
+                InfoRow(
+                    label: "Terminal",
+                    value: container.configuration.initProcess.terminal ? "Enabled" : "Disabled")
 
                 if !container.configuration.initProcess.arguments.isEmpty {
-                    InfoRow(label: "Arguments", value: container.configuration.initProcess.arguments.joined(separator: " "))
+                    InfoRow(
+                        label: "Arguments",
+                        value: container.configuration.initProcess.arguments.joined(separator: " "))
                 }
 
                 // User information
@@ -248,7 +280,8 @@ struct ContainerDetailView: View {
             if !container.configuration.initProcess.environment.isEmpty {
                 ScrollView {
                     LazyVStack(alignment: .leading, spacing: 6) {
-                        ForEach(container.configuration.initProcess.environment, id: \.self) { envVar in
+                        ForEach(container.configuration.initProcess.environment, id: \.self) {
+                            envVar in
                             let components = envVar.split(separator: "=", maxSplits: 1)
                             if components.count == 2 {
                                 HStack(alignment: .top) {
@@ -296,7 +329,8 @@ struct ContainerDetailView: View {
 
             if !container.configuration.mounts.isEmpty {
                 VStack(alignment: .leading, spacing: 12) {
-                    ForEach(Array(container.configuration.mounts.enumerated()), id: \.offset) { index, mount in
+                    ForEach(Array(container.configuration.mounts.enumerated()), id: \.offset) {
+                        index, mount in
                         VStack(alignment: .leading, spacing: 8) {
                             Text("Mount \(index + 1)")
                                 .font(.subheadline)
@@ -314,7 +348,8 @@ struct ContainerDetailView: View {
                             }
 
                             if !mount.options.isEmpty {
-                                InfoRow(label: "Options", value: mount.options.joined(separator: ", "))
+                                InfoRow(
+                                    label: "Options", value: mount.options.joined(separator: ", "))
                             }
                         }
                         .padding()
@@ -346,7 +381,8 @@ struct ContainerImageDetailView: View {
 
     private var imageTag: String {
         if let tagComponent = image.reference.split(separator: ":").last,
-           tagComponent != image.reference.split(separator: "/").last {
+            tagComponent != image.reference.split(separator: "/").last
+        {
             return String(tagComponent)
         }
         return "latest"
@@ -448,7 +484,9 @@ struct ContainerImageDetailView: View {
                 CopyableInfoRow(label: "Reference", value: image.reference)
                 InfoRow(label: "Name", value: imageName)
                 InfoRow(label: "Tag", value: imageTag)
-                InfoRow(label: "Size", value: ByteCountFormatter().string(fromByteCount: Int64(image.descriptor.size)))
+                InfoRow(
+                    label: "Size",
+                    value: ByteCountFormatter().string(fromByteCount: Int64(image.descriptor.size)))
                 if let created = createdDate {
                     InfoRow(label: "Created", value: formatDate(created))
                 }
@@ -466,7 +504,9 @@ struct ContainerImageDetailView: View {
                 InfoRow(label: "Media Type", value: image.descriptor.mediaType)
                 CopyableInfoRow(
                     label: "Digest",
-                    value: String(image.descriptor.digest.replacingOccurrences(of: "sha256:", with: "").prefix(12)),
+                    value: String(
+                        image.descriptor.digest.replacingOccurrences(of: "sha256:", with: "")
+                            .prefix(12)),
                     copyValue: image.descriptor.digest
                 )
                 InfoRow(label: "Size (bytes)", value: "\(image.descriptor.size)")
@@ -534,6 +574,7 @@ struct ContainerImageDetailView: View {
 
 struct BuilderDetailView: View {
     let builder: Builder
+    @EnvironmentObject var containerService: ContainerService
 
     private var networkAddress: String {
         guard !builder.networks.isEmpty else {
@@ -546,6 +587,7 @@ struct BuilderDetailView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 20) {
                 builderHeader()
+                builderControlsSection()
                 builderOverviewSection()
                 builderImageSection()
                 builderNetworkSection()
@@ -576,8 +618,86 @@ struct BuilderDetailView: View {
                     .padding(.vertical, 4)
                     .background(
                         RoundedRectangle(cornerRadius: 8)
-                            .fill(builder.status.lowercased() == "running" ? .green.opacity(0.1) : .red.opacity(0.1))
+                            .fill(
+                                builder.status.lowercased() == "running"
+                                    ? .green.opacity(0.1) : .red.opacity(0.1))
                     )
+            }
+        }
+    }
+
+    @ViewBuilder
+    func builderControlsSection() -> some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Controls")
+                .font(.headline)
+                .fontWeight(.semibold)
+
+            HStack(spacing: 12) {
+                if builder.status.lowercased() == "running" {
+                    Button(action: {
+                        Task { @MainActor in
+                            await containerService.stopBuilder()
+                        }
+                    }) {
+                        HStack {
+                            if containerService.isBuilderLoading {
+                                ProgressView()
+                                    .scaleEffect(0.8)
+                                    .frame(width: 16, height: 16)
+                            } else {
+                                SwiftUI.Image(systemName: "stop.fill")
+                            }
+                            Text("Stop")
+                        }
+                        .frame(minWidth: 80)
+                    }
+                    .buttonStyle(.bordered)
+                    .disabled(containerService.isBuilderLoading)
+                } else {
+                    Button(action: {
+                        Task { @MainActor in
+                            await containerService.startBuilder()
+                        }
+                    }) {
+                        HStack {
+                            if containerService.isBuilderLoading {
+                                ProgressView()
+                                    .scaleEffect(0.8)
+                                    .frame(width: 16, height: 16)
+                            } else {
+                                SwiftUI.Image(systemName: "play.fill")
+                            }
+                            Text("Start")
+                        }
+                        .frame(minWidth: 80)
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .disabled(containerService.isBuilderLoading)
+                }
+
+                Button(action: {
+                    Task { @MainActor in
+                        await containerService.deleteBuilder()
+                    }
+                }) {
+                    HStack {
+                        if containerService.isBuilderLoading {
+                            ProgressView()
+                                .scaleEffect(0.8)
+                                .frame(width: 16, height: 16)
+                        } else {
+                            SwiftUI.Image(systemName: "trash.fill")
+                        }
+                        Text("Delete")
+                    }
+                    .frame(minWidth: 80)
+                }
+                .buttonStyle(.bordered)
+                .tint(.red)
+                .disabled(containerService.isBuilderLoading)
+
+                Spacer()
             }
         }
     }
@@ -591,9 +711,14 @@ struct BuilderDetailView: View {
 
             VStack(alignment: .leading, spacing: 4) {
                 InfoRow(label: "Status", value: builder.status)
-                InfoRow(label: "Platform", value: "\(builder.configuration.platform.os)/\(builder.configuration.platform.architecture)")
+                InfoRow(
+                    label: "Platform",
+                    value:
+                        "\(builder.configuration.platform.os)/\(builder.configuration.platform.architecture)"
+                )
                 InfoRow(label: "Runtime", value: builder.configuration.runtimeHandler)
-                InfoRow(label: "Rosetta", value: builder.configuration.rosetta ? "Enabled" : "Disabled")
+                InfoRow(
+                    label: "Rosetta", value: builder.configuration.rosetta ? "Enabled" : "Disabled")
             }
         }
     }
@@ -607,9 +732,14 @@ struct BuilderDetailView: View {
 
             VStack(alignment: .leading, spacing: 4) {
                 CopyableInfoRow(label: "Reference", value: builder.configuration.image.reference)
-                CopyableInfoRow(label: "Digest", value: builder.configuration.image.descriptor.digest)
-                InfoRow(label: "Size", value: ByteCountFormatter().string(fromByteCount: Int64(builder.configuration.image.descriptor.size)))
-                InfoRow(label: "Media Type", value: builder.configuration.image.descriptor.mediaType)
+                CopyableInfoRow(
+                    label: "Digest", value: builder.configuration.image.descriptor.digest)
+                InfoRow(
+                    label: "Size",
+                    value: ByteCountFormatter().string(
+                        fromByteCount: Int64(builder.configuration.image.descriptor.size)))
+                InfoRow(
+                    label: "Media Type", value: builder.configuration.image.descriptor.mediaType)
             }
         }
     }
@@ -640,7 +770,10 @@ struct BuilderDetailView: View {
                         InfoRow(label: "Network", value: network.network)
 
                         if builder.configuration.dns.nameservers.count > 0 {
-                            InfoRow(label: "DNS", value: builder.configuration.dns.nameservers.joined(separator: ", "))
+                            InfoRow(
+                                label: "DNS",
+                                value: builder.configuration.dns.nameservers.joined(separator: ", ")
+                            )
                         }
                     }
                     if index < builder.networks.count - 1 {
@@ -660,7 +793,10 @@ struct BuilderDetailView: View {
 
             VStack(alignment: .leading, spacing: 4) {
                 InfoRow(label: "CPUs", value: "\(builder.configuration.resources.cpus)")
-                InfoRow(label: "Memory", value: ByteCountFormatter().string(fromByteCount: Int64(builder.configuration.resources.memoryInBytes)))
+                InfoRow(
+                    label: "Memory",
+                    value: ByteCountFormatter().string(
+                        fromByteCount: Int64(builder.configuration.resources.memoryInBytes)))
             }
         }
     }
@@ -674,8 +810,11 @@ struct BuilderDetailView: View {
 
             VStack(alignment: .leading, spacing: 4) {
                 InfoRow(label: "Executable", value: builder.configuration.initProcess.executable)
-                InfoRow(label: "Working Dir", value: builder.configuration.initProcess.workingDirectory)
-                InfoRow(label: "Terminal", value: builder.configuration.initProcess.terminal ? "Yes" : "No")
+                InfoRow(
+                    label: "Working Dir", value: builder.configuration.initProcess.workingDirectory)
+                InfoRow(
+                    label: "Terminal",
+                    value: builder.configuration.initProcess.terminal ? "Yes" : "No")
 
                 if let userId = builder.configuration.initProcess.user.id {
                     InfoRow(label: "User ID", value: "\(userId.uid):\(userId.gid)")
@@ -687,7 +826,8 @@ struct BuilderDetailView: View {
                         .fontWeight(.medium)
                         .padding(.top, 4)
 
-                    ForEach(builder.configuration.initProcess.arguments.indices, id: \.self) { index in
+                    ForEach(builder.configuration.initProcess.arguments.indices, id: \.self) {
+                        index in
                         HStack {
                             Text("[\(index)]")
                                 .font(.caption)
@@ -725,7 +865,8 @@ struct BuilderDetailView: View {
                                 .font(.subheadline)
                                 .fontWeight(.medium)
                         }
-                        InfoRow(label: "Source", value: mount.source.isEmpty ? "tmpfs" : mount.source)
+                        InfoRow(
+                            label: "Source", value: mount.source.isEmpty ? "tmpfs" : mount.source)
                         InfoRow(label: "Destination", value: mount.destination)
                         if mount.type.tmpfs != nil {
                             InfoRow(label: "Type", value: "tmpfs")

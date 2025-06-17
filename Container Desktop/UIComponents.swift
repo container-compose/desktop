@@ -1,63 +1,7 @@
-import SwiftUI
 import AppKit
+import SwiftUI
 
 // MARK: - Container Components
-
-struct BuilderRow: View {
-    let builder: Builder
-
-    private var networkAddress: String {
-        guard !builder.networks.isEmpty else {
-            return "No network"
-        }
-        return builder.networks[0].address.replacingOccurrences(of: "/24", with: "")
-    }
-
-    var body: some View {
-        NavigationLink(value: builder.configuration.id) {
-            HStack {
-                SwiftUI.Image(systemName: "hammer")
-                    .foregroundColor(.orange)
-                    .frame(width: 16, height: 16)
-
-                VStack(alignment: .leading) {
-                    Text(builder.configuration.id)
-                        .font(.headline)
-                    HStack {
-                        Text(builder.status.capitalized)
-                            .font(.subheadline)
-                            .foregroundColor(builder.status.lowercased() == "running" ? .green : .secondary)
-                        Spacer()
-                        Text(networkAddress)
-                            .font(.caption)
-                            .monospaced()
-                            .foregroundColor(.secondary)
-                    }
-                }
-            }
-        }
-        .padding(8)
-        .contextMenu {
-            if !builder.networks.isEmpty {
-                Button {
-                    let pasteboard = NSPasteboard.general
-                    pasteboard.clearContents()
-                    pasteboard.setString(networkAddress, forType: .string)
-                } label: {
-                    Label("Copy IP address", systemImage: "network")
-                }
-            }
-
-            Button {
-                let pasteboard = NSPasteboard.general
-                pasteboard.clearContents()
-                pasteboard.setString(builder.configuration.id, forType: .string)
-            } label: {
-                Label("Copy Builder ID", systemImage: "doc.on.doc")
-            }
-        }
-    }
-}
 
 struct ContainerImageRow: View {
     let image: ContainerImage
@@ -74,7 +18,8 @@ struct ContainerImageRow: View {
     private var imageTag: String {
         // Extract the tag from the reference (e.g., "docker.io/library/alpine:3" -> "3")
         if let tagComponent = image.reference.split(separator: ":").last,
-           tagComponent != image.reference.split(separator: "/").last {
+            tagComponent != image.reference.split(separator: "/").last
+        {
             return String(tagComponent)
         }
         return "latest"
@@ -95,9 +40,11 @@ struct ContainerImageRow: View {
                             .font(.subheadline)
                             .foregroundColor(.secondary)
                         Spacer()
-                        Text(ByteCountFormatter().string(fromByteCount: Int64(image.descriptor.size)))
-                            .font(.caption)
-                            .foregroundColor(.secondary)
+                        Text(
+                            ByteCountFormatter().string(fromByteCount: Int64(image.descriptor.size))
+                        )
+                        .font(.caption)
+                        .foregroundColor(.secondary)
                     }
                 }
             }
@@ -269,7 +216,7 @@ struct ContainerControlButton: View {
             case .stop:
                 onStop()
             case .loading:
-                break // No action when loading
+                break  // No action when loading
             }
         } label: {
             SwiftUI.Image(systemName: buttonState.icon)
@@ -288,7 +235,9 @@ struct ContainerControlButton: View {
         .help(buttonState.helpText)
         .modifier(CursorModifier(cursor: buttonState == .loading ? .arrow : .pointingHand))
         .onChange(of: buttonState) { _, newState in
-            print("Container \(container.configuration.id) state changed to: \(newState), status: \(container.status), isLoading: \(isLoading)")
+            print(
+                "Container \(container.configuration.id) state changed to: \(newState), status: \(container.status), isLoading: \(isLoading)"
+            )
             isRotating = (newState == .loading)
         }
     }
