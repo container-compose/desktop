@@ -9,6 +9,7 @@ struct LogsView: View {
     @State private var autoScroll: Bool = true
     @State private var refreshTimer: Timer?
     @State private var lastLogSize: Int = 0
+    @State private var filterText: String = ""
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -30,6 +31,30 @@ struct LogsView: View {
             }
             .padding(.horizontal)
             .padding(.vertical, 8)
+
+            // Filter section
+            HStack {
+                SwiftUI.Image(systemName: "magnifyingglass")
+                    .foregroundColor(.secondary)
+                TextField("Filter logs...", text: $filterText)
+                    .textFieldStyle(RoundedBorderTextFieldStyle())
+
+                if !filterText.isEmpty {
+                    Text("\(matchCount) matches")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+
+                    Button(action: {
+                        filterText = ""
+                    }) {
+                        SwiftUI.Image(systemName: "xmark.circle.fill")
+                            .foregroundColor(.secondary)
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+            .padding(.horizontal)
+            .padding(.bottom, 8)
 
             Divider()
 
@@ -53,9 +78,7 @@ struct LogsView: View {
                                 Spacer()
                             }
                         } else {
-                            Text(logs)
-                                .font(.system(.body, design: .monospaced))
-                                .textSelection(.enabled)
+                            highlightedLogsView
                                 .padding()
                                 .frame(maxWidth: .infinity, alignment: .leading)
                                 .id("logs-bottom")
@@ -63,7 +86,14 @@ struct LogsView: View {
                     }
                 }
                 .background(Color(NSColor.textBackgroundColor))
-                .onChange(of: logs) { _ in
+                .onChange(of: logs) {
+                    if autoScroll {
+                        withAnimation(.easeOut(duration: 0.2)) {
+                            proxy.scrollTo("logs-bottom", anchor: .bottom)
+                        }
+                    }
+                }
+                .onChange(of: filterText) {
                     if autoScroll {
                         withAnimation(.easeOut(duration: 0.2)) {
                             proxy.scrollTo("logs-bottom", anchor: .bottom)
@@ -125,12 +155,82 @@ struct LogsView: View {
         logs = ""
         lastLogSize = 0
     }
+
+    private var highlightedLogsView: some View {
+        let displayLogs = filteredLogs
+
+        return Text(createAttributedString(from: displayLogs, searchText: filterText))
+            .font(.system(.body, design: .monospaced))
+            .textSelection(.enabled)
+    }
+
+    private var filteredLogs: String {
+        if filterText.isEmpty {
+            return logs
+        }
+
+        let lines = logs.components(separatedBy: .newlines)
+        let filteredLines = lines.filter { line in
+            line.lowercased().contains(filterText.lowercased())
+        }
+
+        return filteredLines.joined(separator: "\n")
+    }
+
+    private var matchCount: Int {
+        if filterText.isEmpty {
+            return 0
+        }
+
+        let lines = logs.components(separatedBy: .newlines)
+        return lines.filter { line in
+            line.lowercased().contains(filterText.lowercased())
+        }.count
+    }
+
+    private func createAttributedString(from text: String, searchText: String) -> AttributedString {
+        var attributedString = AttributedString(text)
+
+        guard !searchText.isEmpty else {
+            return attributedString
+        }
+
+        let searchLower = searchText.lowercased()
+        let textLower = text.lowercased()
+
+        var searchRange = textLower.startIndex..<textLower.endIndex
+
+        while let range = textLower.range(of: searchLower, range: searchRange) {
+            let attributedRange = Range(range, in: attributedString)!
+            attributedString[attributedRange].backgroundColor = .yellow.opacity(0.7)
+            attributedString[attributedRange].foregroundColor = .black
+
+            searchRange = range.upperBound..<textLower.endIndex
+        }
+
+        return attributedString
+    }
 }
 
 struct LogsView_Previews: PreviewProvider {
     static var previews: some View {
-        LogsView(containerId: "test-container")
-            .environmentObject(ContainerService())
-            .frame(width: 600, height: 400)
+        VStack {
+            Text("LogsView Preview")
+                .font(.headline)
+            Text("Features:")
+                .font(.subheadline)
+            VStack(alignment: .leading) {
+                Text("• Real-time log streaming every second")
+                Text("• Text filter with yellow highlighting")
+                Text("• Auto-scroll toggle")
+                Text("• Clear logs button")
+                Text("• Match counter")
+                Text("• Case-insensitive search")
+            }
+            .font(.caption)
+            .frame(maxWidth: .infinity, alignment: .leading)
+        }
+        .padding()
+        .frame(width: 600, height: 400)
     }
 }
