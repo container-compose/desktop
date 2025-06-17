@@ -915,14 +915,22 @@ struct ContainerRow: View {
 
     var body: some View {
         NavigationLink(value: container.configuration.id) {
-            VStack(alignment: .leading) {
-                Text(container.configuration.id)
-                    .badge(container.status)
-                Text(networkAddress)
-                    .font(.subheadline)
-                    .monospaced()
+            HStack {
+                VStack(alignment: .leading) {
+                    Text(container.configuration.id)
+                    Text(networkAddress)
+                        .font(.subheadline)
+                        .monospaced()
+                }
+
+                Spacer()
+
+                Circle()
+                    .fill(container.status.lowercased() == "running" ? .green : .gray)
+                    .frame(width: 8, height: 8)
             }
         }
+        .padding(8)
         .contextMenu {
             if !container.networks.isEmpty {
                 Button {
