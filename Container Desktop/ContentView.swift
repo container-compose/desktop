@@ -552,11 +552,34 @@ struct ContentView: View {
                     // Scrollable content
                     ScrollView {
                         VStack(alignment: .leading, spacing: 20) {
-                            containerOverviewSection(container: container)
-                            containerImageSection(container: container)
+                            // Overview and Image side by side
+                            HStack(alignment: .top, spacing: 20) {
+                                containerOverviewSection(container: container)
+                                containerImageSection(container: container)
+                            }
+
+                            Divider()
+
+                            // Network section full width
                             containerNetworkSection(container: container)
-                            containerResourcesSection(container: container)
-                            containerProcessSection(container: container)
+
+                            Divider()
+
+                            // Resources and Process side by side
+                            HStack(alignment: .top, spacing: 20) {
+                                containerResourcesSection(container: container)
+                                containerProcessSection(container: container)
+                            }
+
+                            Divider()
+
+                            // Environment variables section
+                            containerEnvironmentSection(container: container)
+
+                            Divider()
+
+                            // Mounts section
+                            containerMountsSection(container: container)
 
                             Spacer(minLength: 20)
                         }
@@ -612,7 +635,7 @@ struct ContentView: View {
                 .foregroundColor(.primary)
 
             VStack(alignment: .leading, spacing: 8) {
-                InfoRow(label: "Container ID", value: container.configuration.id)
+                CopyableInfoRow(label: "Container ID", value: container.configuration.id)
                 InfoRow(label: "Runtime", value: container.configuration.runtimeHandler)
                 InfoRow(label: "Platform", value: "\(container.configuration.platform.os)/\(container.configuration.platform.architecture)")
                 if let hostname = container.configuration.hostname {
@@ -620,6 +643,7 @@ struct ContentView: View {
                 }
             }
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     private func containerImageSection(container: Container) -> some View {
@@ -631,10 +655,15 @@ struct ContentView: View {
             VStack(alignment: .leading, spacing: 8) {
                 InfoRow(label: "Reference", value: container.configuration.image.reference)
                 InfoRow(label: "Media Type", value: container.configuration.image.descriptor.mediaType)
-                InfoRow(label: "Digest", value: String(container.configuration.image.descriptor.digest.replacingOccurrences(of: "sha256:", with: "").prefix(12)))
+                CopyableInfoRow(
+                    label: "Digest",
+                    value: String(container.configuration.image.descriptor.digest.replacingOccurrences(of: "sha256:", with: "").prefix(12)),
+                    copyValue: container.configuration.image.descriptor.digest
+                )
                 InfoRow(label: "Size", value: ByteCountFormatter().string(fromByteCount: Int64(container.configuration.image.descriptor.size)))
             }
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     private func containerNetworkSection(container: Container) -> some View {
@@ -646,7 +675,11 @@ struct ContentView: View {
             if !container.networks.isEmpty {
                 ForEach(container.networks, id: \.hostname) { network in
                     VStack(alignment: .leading, spacing: 8) {
-                        InfoRow(label: "Address", value: network.address)
+                        CopyableInfoRow(
+                            label: "Address",
+                            value: network.address,
+                            copyValue: network.address.replacingOccurrences(of: "/24", with: "")
+                        )
                         InfoRow(label: "Gateway", value: network.gateway)
                         InfoRow(label: "Network", value: network.network)
                         if network.hostname != container.configuration.hostname {
@@ -696,6 +729,7 @@ struct ContentView: View {
                 InfoRow(label: "Rosetta", value: container.configuration.rosetta ? "Enabled" : "Disabled")
             }
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     private func containerProcessSection(container: Container) -> some View {
@@ -713,10 +747,6 @@ struct ContentView: View {
                     InfoRow(label: "Arguments", value: container.configuration.initProcess.arguments.joined(separator: " "))
                 }
 
-                if !container.configuration.initProcess.environment.isEmpty {
-                    InfoRow(label: "Environment", value: "\(container.configuration.initProcess.environment.count) variables")
-                }
-
                 // User information
                 if let userString = container.configuration.initProcess.user.raw?.userString {
                     InfoRow(label: "User", value: userString)
@@ -724,6 +754,98 @@ struct ContentView: View {
                 if let userId = container.configuration.initProcess.user.id {
                     InfoRow(label: "UID:GID", value: "\(userId.uid):\(userId.gid)")
                 }
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    private func containerEnvironmentSection(container: Container) -> some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Environment Variables")
+                .font(.headline)
+                .foregroundColor(.primary)
+
+            if !container.configuration.initProcess.environment.isEmpty {
+                ScrollView {
+                    LazyVStack(alignment: .leading, spacing: 6) {
+                        ForEach(container.configuration.initProcess.environment, id: \.self) { envVar in
+                            let components = envVar.split(separator: "=", maxSplits: 1)
+                            if components.count == 2 {
+                                HStack(alignment: .top) {
+                                    Text(String(components[0]))
+                                        .font(.system(.subheadline, design: .monospaced))
+                                        .foregroundColor(.primary)
+                                        .frame(minWidth: 100, alignment: .leading)
+
+                                    Text("=")
+                                        .font(.system(.subheadline, design: .monospaced))
+                                        .foregroundColor(.secondary)
+
+                                    Text(String(components[1]))
+                                        .font(.system(.subheadline, design: .monospaced))
+                                        .foregroundColor(.secondary)
+                                        .textSelection(.enabled)
+                                        .frame(maxWidth: .infinity, alignment: .leading)
+                                }
+                                .padding(.vertical, 2)
+                            } else {
+                                Text(envVar)
+                                    .font(.system(.subheadline, design: .monospaced))
+                                    .textSelection(.enabled)
+                            }
+                        }
+                    }
+                }
+                .frame(maxHeight: 200)
+                .padding()
+                .background(Color(NSColor.controlBackgroundColor).opacity(0.5))
+                .cornerRadius(8)
+            } else {
+                Text("No environment variables")
+                    .foregroundColor(.secondary)
+                    .italic()
+            }
+        }
+    }
+
+    private func containerMountsSection(container: Container) -> some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Mounts")
+                .font(.headline)
+                .foregroundColor(.primary)
+
+            if !container.configuration.mounts.isEmpty {
+                VStack(alignment: .leading, spacing: 12) {
+                    ForEach(Array(container.configuration.mounts.enumerated()), id: \.offset) { index, mount in
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text("Mount \(index + 1)")
+                                .font(.subheadline)
+                                .fontWeight(.medium)
+
+                            InfoRow(label: "Source", value: mount.source)
+                            InfoRow(label: "Destination", value: mount.destination)
+
+                            if mount.type.virtiofs != nil {
+                                InfoRow(label: "Type", value: "VirtioFS")
+                            } else if mount.type.tmpfs != nil {
+                                InfoRow(label: "Type", value: "tmpfs")
+                            } else {
+                                InfoRow(label: "Type", value: "Unknown")
+                            }
+
+                            if !mount.options.isEmpty {
+                                InfoRow(label: "Options", value: mount.options.joined(separator: ", "))
+                            }
+                        }
+                        .padding()
+                        .background(Color(NSColor.controlBackgroundColor).opacity(0.5))
+                        .cornerRadius(8)
+                    }
+                }
+            } else {
+                Text("No mounts")
+                    .foregroundColor(.secondary)
+                    .italic()
             }
         }
     }
@@ -744,6 +866,45 @@ struct ContentView: View {
                     .font(.subheadline)
                     .textSelection(.enabled)
                     .frame(maxWidth: .infinity, alignment: .leading)
+            }
+        }
+    }
+
+    // Helper view for copyable info rows
+    private struct CopyableInfoRow: View {
+        let label: String
+        let value: String
+        let copyValue: String?
+
+        init(label: String, value: String, copyValue: String? = nil) {
+            self.label = label
+            self.value = value
+            self.copyValue = copyValue
+        }
+
+        var body: some View {
+            HStack(alignment: .top) {
+                Text(label)
+                    .font(.subheadline)
+                    .foregroundColor(.secondary)
+                    .frame(width: 120, alignment: .leading)
+
+                Text(value)
+                    .font(.subheadline)
+                    .textSelection(.enabled)
+//                    .frame(maxWidth: .infinity, alignment: .leading)
+
+                Button {
+                    let pasteboard = NSPasteboard.general
+                    pasteboard.clearContents()
+                    pasteboard.setString(copyValue ?? value, forType: .string)
+                } label: {
+                    SwiftUI.Image(systemName: "doc.on.doc")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
+                .buttonStyle(.plain)
+                .help("Copy to clipboard")
             }
         }
     }
