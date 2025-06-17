@@ -4,7 +4,9 @@ import SwiftExec
 
 class ContainerService: ObservableObject {
     @Published var containers: [Container] = []
+    @Published var images: [ContainerImage] = []
     @Published var isLoading: Bool = false
+    @Published var isImagesLoading: Bool = false
     @Published var errorMessage: String?
     @Published var systemStatus: SystemStatus = .unknown
     @Published var isSystemLoading: Bool = false
@@ -74,6 +76,46 @@ class ContainerService: ObservableObject {
             await MainActor.run {
                 self.errorMessage = error.localizedDescription
                 self.isLoading = false
+            }
+            print(error)
+        }
+    }
+
+    func loadImages() async {
+        await MainActor.run {
+            isImagesLoading = true
+            errorMessage = nil
+        }
+
+        var result: ExecResult
+        do {
+            result = try exec(
+                program: "/usr/local/bin/container",
+                arguments: ["images", "list", "--format", "json"])
+        } catch {
+            let error = error as! ExecError
+            result = error.execResult
+        }
+
+        do {
+            let data = result.stdout?.data(using: .utf8)
+            let newImages = try JSONDecoder().decode(
+                [ContainerImage].self, from: data!)
+
+            await MainActor.run {
+                withAnimation(.easeInOut(duration: 0.3)) {
+                    self.images = newImages
+                }
+                self.isImagesLoading = false
+            }
+
+            for image in newImages {
+                print("Image: \(image.reference)")
+            }
+        } catch {
+            await MainActor.run {
+                self.errorMessage = error.localizedDescription
+                self.isImagesLoading = false
             }
             print(error)
         }
@@ -341,3 +383,4 @@ class ContainerService: ObservableObject {
 
 // MARK: - Type aliases for JSON decoding
 typealias Containers = [Container]
+typealias Images = [ContainerImage]
