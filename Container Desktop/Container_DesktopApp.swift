@@ -40,8 +40,7 @@ struct MenuBarView: View {
                 Circle()
                     .fill(containerService.systemStatus.color)
                     .frame(width: 8, height: 8)
-                Text("System: \(containerService.systemStatus.text)")
-                    .font(.caption)
+                Text("Containers is \(containerService.systemStatus.text)")
             }
 
             Divider()
@@ -72,36 +71,57 @@ struct MenuBarView: View {
 
             // Container Controls
             if !containerService.containers.isEmpty {
-                Text("Containers (\(containerService.containers.count))")
+                Menu("Containers (\(containerService.containers.count))") {
+                    ForEach(containerService.containers, id: \.configuration.id) { container in
+                        Menu {
+                            // Container status
+                            HStack {
+                                Circle()
+                                    .fill(container.status.lowercased() == "running" ? .green : .gray)
+                                    .frame(width: 8, height: 8)
+                                Text("Status: \(container.status)")
+                            }
+                            .foregroundColor(.secondary)
 
-                ForEach(containerService.containers.prefix(5), id: \.configuration.id) { container in
-                    HStack {
-                        Circle()
-                            .fill(container.status == "running" ? .green : .gray)
-                            .frame(width: 6, height: 6)
-                        Text(container.configuration.hostname ?? "Unknown")
-                            .font(.caption)
-                        MenuBarContainerButton(
-                            container: container,
-                            isLoading: containerService.loadingContainers.contains(container.configuration.id),
-                            onStart: {
-                                Task { @MainActor in
-                                    await containerService.startContainer(container.configuration.id)
-                                }
-                            },
-                            onStop: {
-                                Task { @MainActor in
-                                    await containerService.stopContainer(container.configuration.id)
+                            Divider()
+
+                            // Copy IP address
+                            if !container.networks.isEmpty {
+                                Button("Copy IP Address") {
+                                    let pasteboard = NSPasteboard.general
+                                    pasteboard.clearContents()
+                                    let ipAddress = container.networks[0].address.replacingOccurrences(of: "/24", with: "")
+                                    pasteboard.setString(ipAddress, forType: .string)
                                 }
                             }
-                        )
-                    }
-                }
 
-                if containerService.containers.count > 5 {
-                    Text("+ \(containerService.containers.count - 5) more...")
-                        .font(.caption2)
-                        .foregroundColor(.secondary)
+                            // Start/Stop container
+                            if containerService.loadingContainers.contains(container.configuration.id) {
+                                Text("Loading...")
+                                    .foregroundColor(.gray)
+                            } else if container.status.lowercased() == "running" {
+                                Button("Stop Container") {
+                                    Task { @MainActor in
+                                        await containerService.stopContainer(container.configuration.id)
+                                    }
+                                }
+                            } else {
+                                Button("Start Container") {
+                                    Task { @MainActor in
+                                        await containerService.startContainer(container.configuration.id)
+                                    }
+                                }
+                            }
+                        } label: {
+                            Label {
+                                Text(container.configuration.hostname ?? "Unknown")
+                            } icon: {
+                                Circle()
+                                    .fill(container.status.lowercased() == "running" ? .green : .gray)
+                                    .frame(width: 8, height: 8)
+                            }
+                        }
+                    }
                 }
 
                 Divider()
@@ -137,51 +157,5 @@ struct MenuBarView: View {
             refreshTimer?.invalidate()
             refreshTimer = nil
         }
-    }
-}
-
-struct MenuBarContainerButton: View {
-    let container: Container
-    let isLoading: Bool
-    let onStart: () -> Void
-    let onStop: () -> Void
-
-    private var buttonState: ButtonState {
-        if isLoading {
-            return .loading
-        } else if container.status == "running" {
-            return .stop
-        } else {
-            return .start
-        }
-    }
-
-    private enum ButtonState {
-        case start, stop, loading
-        var text: String {
-            switch self {
-            case .start: return "Start Container"
-            case .stop: return "Stop Container"
-            case .loading: return "Loading..."
-            }
-        }
-    }
-
-    var body: some View {
-        Button {
-            switch buttonState {
-            case .start:
-                onStart()
-            case .stop:
-                onStop()
-            case .loading:
-                break
-            }
-        } label: {
-            Text(buttonState.text)
-                .font(.caption2)
-        }
-        .buttonStyle(.plain)
-        .disabled(buttonState == .loading)
     }
 }
