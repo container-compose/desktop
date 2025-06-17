@@ -449,38 +449,15 @@ struct ContentView: View {
                 Circle()
                     .fill(containerService.systemStatus.color)
                     .frame(width: 8, height: 8)
-                Text("System: \(containerService.systemStatus.text)")
+                Text("Containers \(containerService.systemStatus.text)")
                     .font(.caption)
                     .foregroundColor(.secondary)
                 Spacer()
             }
-
-            HStack(spacing: 4) {
-                Button("Stop") {
-                    Task { @MainActor in
-                        await containerService.stopSystem()
-                    }
-                }
-                .buttonStyle(.borderless)
-                .font(.caption)
-                .disabled(
-                    containerService.isSystemLoading
-                        || containerService.systemStatus == .stopped)
-
-                Button("Restart") {
-                    Task { @MainActor in
-                        await containerService.restartSystem()
-                    }
-                }
-                .buttonStyle(.borderless)
-                .font(.caption)
-                .disabled(containerService.isSystemLoading || containerService.systemStatus == .stopped)
-
-                Spacer()
-            }
         }
         .padding(.horizontal)
-        .padding(.bottom, 8)
+        .padding(.top, 4)
+        .padding(.bottom, 12)
     }
 
     @ViewBuilder

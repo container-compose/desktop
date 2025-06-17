@@ -45,30 +45,6 @@ struct MenuBarView: View {
 
             Divider()
 
-            // System Controls
-            Button("Start System") {
-                Task { @MainActor in
-                    await containerService.startSystem()
-                }
-            }
-            .disabled(containerService.isSystemLoading || containerService.systemStatus == .running)
-
-            Button("Stop System") {
-                Task { @MainActor in
-                    await containerService.stopSystem()
-                }
-            }
-            .disabled(containerService.isSystemLoading || containerService.systemStatus == .stopped)
-
-            Button("Restart System") {
-                Task { @MainActor in
-                    await containerService.restartSystem()
-                }
-            }
-            .disabled(containerService.isSystemLoading || containerService.systemStatus == .stopped)
-
-            Divider()
-
             // Container Controls
             if !containerService.containers.isEmpty {
                 Menu("Containers (\(containerService.containers.count))") {
@@ -127,15 +103,29 @@ struct MenuBarView: View {
                 Divider()
             }
 
-            // App Controls
-            Button("Show Main Window") {
-                if let window = NSApplication.shared.keyWindow {
-                    window.makeKeyAndOrderFront(nil)
-                    NSApplication.shared.activate(ignoringOtherApps: true)
+            // System Controls
+            Button("Start") {
+                Task { @MainActor in
+                    await containerService.startSystem()
                 }
             }
+            .disabled(containerService.isSystemLoading || containerService.systemStatus == .running)
 
-            Button("Quit") {
+            Button("Stop") {
+                Task { @MainActor in
+                    await containerService.stopSystem()
+                }
+            }
+            .disabled(containerService.isSystemLoading || containerService.systemStatus == .stopped)
+
+            Button("Restart") {
+                Task { @MainActor in
+                    await containerService.restartSystem()
+                }
+            }
+            .disabled(containerService.isSystemLoading || containerService.systemStatus == .stopped)
+
+            Button("Quit Container Compose") {
                 NSApplication.shared.terminate(nil)
             }
         }
