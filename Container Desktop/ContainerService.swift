@@ -15,6 +15,31 @@ class ContainerService: ObservableObject {
     @Published var loadingContainers: Set<String> = []
     @Published var isBuilderLoading: Bool = false
 
+    // Computed property to get all unique mounts from containers
+    var allMounts: [ContainerMount] {
+        var mountDict: [String: ContainerMount] = [:]
+
+        for container in containers {
+            for mount in container.configuration.mounts {
+                let mountId = "\(mount.source)->\(mount.destination)"
+
+                if var existingMount = mountDict[mountId] {
+                    // Add this container to the existing mount
+                    var updatedContainerIds = existingMount.containerIds
+                    if !updatedContainerIds.contains(container.configuration.id) {
+                        updatedContainerIds.append(container.configuration.id)
+                    }
+                    mountDict[mountId] = ContainerMount(mount: mount, containerIds: updatedContainerIds)
+                } else {
+                    // Create new mount entry
+                    mountDict[mountId] = ContainerMount(mount: mount, containerIds: [container.configuration.id])
+                }
+            }
+        }
+
+        return Array(mountDict.values).sorted { $0.mount.source < $1.mount.source }
+    }
+
     enum SystemStatus {
         case unknown
         case stopped

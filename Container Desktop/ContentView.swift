@@ -12,6 +12,7 @@ struct ContentView: View {
     @State private var selection: String?
     @State private var selectedContainer: String?
     @State private var selectedImage: String?
+    @State private var selectedMount: String?
 
     @State private var searchText: String = ""
     @State private var filterSelection: ContainerFilter = .all
@@ -42,6 +43,10 @@ struct ContentView: View {
             if selectedContainer == nil && !newContainers.isEmpty {
                 selectedContainer = newContainers[0].configuration.id
             }
+            // Auto-select first mount when mounts change
+            if selectedMount == nil && !containerService.allMounts.isEmpty {
+                selectedMount = containerService.allMounts[0].id
+            }
         }
         .onReceive(
             NotificationCenter.default.publisher(for: NSNotification.Name("NavigateToContainer"))
@@ -59,6 +64,15 @@ struct ContentView: View {
                 // Switch to images view and select the specific image
                 selection = "images"
                 selectedImage = imageReference
+            }
+        }
+        .onReceive(
+            NotificationCenter.default.publisher(for: NSNotification.Name("NavigateToMount"))
+        ) { notification in
+            if let mountId = notification.object as? String {
+                // Switch to mounts view and select the specific mount
+                selection = "mounts"
+                selectedMount = mountId
             }
         }
     }
@@ -150,6 +164,7 @@ struct ContentView: View {
             }
             NavigationLink(value: "mounts") {
                 Text("Mounts")
+                    .badge(containerService.allMounts.count)
             }
             NavigationLink(value: "builders") {
                 HStack {
@@ -193,7 +208,7 @@ struct ContentView: View {
         case "images":
             imagesList
         case "mounts":
-            Text("mounts list")
+            mountsList
         case "builders":
             EmptyView()  // This won't be shown since builders use 2-column layout
         case "registry":
@@ -209,20 +224,6 @@ struct ContentView: View {
 
     private var containersList: some View {
         VStack(spacing: 0) {
-            // Title bar
-            VStack(spacing: 12) {
-                // Filter picker at top
-                Picker("", selection: $filterSelection) {
-                    ForEach(ContainerFilter.allCases, id: \.self) { filter in
-                        Text(filter.rawValue).tag(filter)
-                    }
-                }
-                .pickerStyle(SegmentedPickerStyle())
-            }
-            .padding()
-            .background(Color(.windowBackgroundColor))
-
-            Divider()
 
             // Container list
             List(selection: $selectedContainer) {
@@ -254,8 +255,15 @@ struct ContentView: View {
 
             Divider()
 
-            // Search field at bottom
             VStack(spacing: 12) {
+
+                Picker("", selection: $filterSelection) {
+                    ForEach(ContainerFilter.allCases, id: \.self) { filter in
+                        Text(filter.rawValue).tag(filter)
+                    }
+                }
+                .pickerStyle(SegmentedPickerStyle())
+
                 HStack {
                     SwiftUI.Image(systemName: "magnifyingglass")
                         .foregroundColor(.secondary)
@@ -298,17 +306,17 @@ struct ContentView: View {
 
     private var imagesList: some View {
         VStack(spacing: 0) {
-            // Title bar
-            HStack {
-                Text("Available Images")
-                    .font(.title2)
-                    .fontWeight(.semibold)
-                Spacer()
-            }
-            .padding()
-            .background(Color(.windowBackgroundColor))
+            // // Title bar
+            // HStack {
+            //     Text("Available Images")
+            //         .font(.title2)
+            //         .fontWeight(.semibold)
+            //     Spacer()
+            // }
+            // .padding()
+            // .background(Color(.windowBackgroundColor))
 
-            Divider()
+            // Divider()
 
             // Images list
             List(selection: $selectedImage) {
@@ -361,7 +369,7 @@ struct ContentView: View {
         case "images":
             imageDetailView
         case "mounts":
-            Text("mounts")
+            mountDetailView
         case "builders":
             builderDetailView
         case "registry":
@@ -390,6 +398,63 @@ struct ContentView: View {
         ForEach(containerService.images, id: \.reference) { image in
             if selectedImage == image.reference {
                 ContainerImageDetailView(image: image)
+                    .environmentObject(containerService)
+            }
+        }
+    }
+
+    private var mountsList: some View {
+        VStack(spacing: 0) {
+            // Mounts list
+            List(selection: $selectedMount) {
+                ForEach(filteredMounts, id: \.id) { mount in
+                    MountRow(mount: mount)
+                }
+            }
+            .listStyle(PlainListStyle())
+            .animation(.easeInOut(duration: 0.15), value: filteredMounts.count)
+
+            Divider()
+
+            // Filter controls at bottom
+            VStack(spacing: 12) {
+                // Search field
+                HStack {
+                    SwiftUI.Image(systemName: "magnifyingglass")
+                        .foregroundColor(.secondary)
+                    TextField("Filter mounts...", text: $searchText)
+                        .textFieldStyle(PlainTextFieldStyle())
+                }
+                .padding(.horizontal, 8)
+                .padding(.vertical, 4)
+                .background(Color(.black))
+                .cornerRadius(6)
+            }
+            .padding()
+            .background(Color(.controlBackgroundColor))
+        }
+    }
+
+    private var filteredMounts: [ContainerMount] {
+        var filtered = containerService.allMounts
+
+        // Apply search filter
+        if !searchText.isEmpty {
+            filtered = filtered.filter { mount in
+                mount.mount.source.localizedCaseInsensitiveContains(searchText)
+                    || mount.mount.destination.localizedCaseInsensitiveContains(searchText)
+                    || mount.mountType.localizedCaseInsensitiveContains(searchText)
+            }
+        }
+
+        return filtered
+    }
+
+    @ViewBuilder
+    private var mountDetailView: some View {
+        ForEach(containerService.allMounts, id: \.id) { mount in
+            if selectedMount == mount.id {
+                MountDetailView(mount: mount)
                     .environmentObject(containerService)
             }
         }

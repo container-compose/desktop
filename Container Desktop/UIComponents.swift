@@ -70,6 +70,62 @@ struct ContainerImageRow: View {
     }
 }
 
+struct MountRow: View {
+    let mount: ContainerMount
+
+    private var displaySource: String {
+        // Show just the last component of the path for cleaner display
+        URL(fileURLWithPath: mount.mount.source).lastPathComponent
+    }
+
+    private var displayDestination: String {
+        // Show just the last component of the path for cleaner display
+        URL(fileURLWithPath: mount.mount.destination).lastPathComponent
+    }
+
+    var body: some View {
+        NavigationLink(value: mount.id) {
+            HStack {
+                SwiftUI.Image(systemName: mount.mount.type.virtiofs != nil ? "externaldrive" : "folder")
+                    .foregroundColor(.blue)
+                    .frame(width: 16, height: 16)
+                    .padding(.trailing, 8)
+
+                VStack(alignment: .leading, spacing: 2) {
+                    HStack {
+                        Text(displaySource)
+                            .font(.headline)
+                        SwiftUI.Image(systemName: "arrow.right")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                        Text(displayDestination)
+                            .font(.headline)
+                            .foregroundColor(.secondary)
+                    }
+                }
+            }
+        }
+        .padding(8)
+        .contextMenu {
+            Button {
+                let pasteboard = NSPasteboard.general
+                pasteboard.clearContents()
+                pasteboard.setString(mount.mount.source, forType: .string)
+            } label: {
+                Label("Copy Source Path", systemImage: "doc.on.doc")
+            }
+
+            Button {
+                let pasteboard = NSPasteboard.general
+                pasteboard.clearContents()
+                pasteboard.setString(mount.mount.destination, forType: .string)
+            } label: {
+                Label("Copy Destination Path", systemImage: "doc.on.doc")
+            }
+        }
+    }
+}
+
 struct ContainerRow: View {
     let container: Container
     let isLoading: Bool
@@ -79,7 +135,11 @@ struct ContainerRow: View {
 
     private var networkAddress: String {
         guard !container.networks.isEmpty else {
-            return "No network"
+            if container.status == "running" {
+                return "No network"
+            } else {
+                return "Not running"
+            }
         }
         return container.networks[0].address.replacingOccurrences(of: "/24", with: "")
     }
@@ -90,6 +150,7 @@ struct ContainerRow: View {
                 Circle()
                     .fill(container.status.lowercased() == "running" ? .green : .gray)
                     .frame(width: 8, height: 8)
+                    .padding(.trailing, 8)
 
                 VStack(alignment: .leading) {
                     Text(container.configuration.id)

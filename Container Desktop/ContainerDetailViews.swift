@@ -9,18 +9,6 @@ struct ContainerDetailView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            // Title bar
-            HStack {
-                Text("Container Details")
-                    .font(.title2)
-                    .fontWeight(.semibold)
-                Spacer()
-            }
-            .padding()
-            .background(Color(.windowBackgroundColor))
-
-            Divider()
-
             // Header with controls
             containerHeader(container: container)
 
@@ -115,10 +103,11 @@ struct ContainerDetailView: View {
                             }
                         }
                     )
+                    .padding(.trailing, 32)
                 }
             }
         }
-        .padding()
+        .padding(.vertical, 16)
         .background(Color(NSColor.controlBackgroundColor))
     }
 
@@ -358,9 +347,28 @@ struct ContainerDetailView: View {
                     ForEach(Array(container.configuration.mounts.enumerated()), id: \.offset) {
                         index, mount in
                         VStack(alignment: .leading, spacing: 8) {
-                            Text("Mount \(index + 1)")
-                                .font(.subheadline)
-                                .fontWeight(.medium)
+                            HStack {
+                                Text("Mount \(index + 1)")
+                                    .font(.subheadline)
+                                    .fontWeight(.medium)
+
+                                Spacer()
+
+                                Button {
+                                    // Navigate to mount details
+                                    let mountId = "\(mount.source)->\(mount.destination)"
+                                    NotificationCenter.default.post(
+                                        name: NSNotification.Name("NavigateToMount"),
+                                        object: mountId
+                                    )
+                                } label: {
+                                    SwiftUI.Image(systemName: "chevron.right")
+                                        .font(.caption)
+                                        .foregroundColor(.secondary)
+                                }
+                                .buttonStyle(.plain)
+                                .help("View mount details")
+                            }
 
                             InfoRow(label: "Source", value: mount.source)
                             InfoRow(label: "Destination", value: mount.destination)
@@ -427,17 +435,17 @@ struct ContainerImageDetailView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            // Title bar
-            HStack {
-                Text("Image Details")
-                    .font(.title2)
-                    .fontWeight(.semibold)
-                Spacer()
-            }
-            .padding()
-            .background(Color(.windowBackgroundColor))
+            // // Title bar
+            // HStack {
+            //     Text("Image Details")
+            //         .font(.title2)
+            //         .fontWeight(.semibold)
+            //     Spacer()
+            // }
+            // .padding()
+            // .background(Color(.windowBackgroundColor))
 
-            Divider()
+            // Divider()
 
             // Header
             imageHeader()
@@ -1011,6 +1019,218 @@ struct BuilderDetailView: View {
                     if index < builder.configuration.mounts.count - 1 {
                         Divider()
                     }
+                }
+            }
+        }
+    }
+}
+
+struct MountDetailView: View {
+    let mount: ContainerMount
+    @EnvironmentObject var containerService: ContainerService
+
+    private var containersUsingMount: [Container] {
+        containerService.containers.filter { container in
+            mount.containerIds.contains(container.configuration.id)
+        }
+    }
+
+    var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 20) {
+                mountHeader()
+                mountOverviewSection()
+                mountTechnicalSection()
+                containersUsingMountSection()
+            }
+        }
+    }
+
+    private func mountHeader() -> some View {
+        HStack {
+            SwiftUI.Image(systemName: mount.mount.type.virtiofs != nil ? "externaldrive" : "folder")
+                .font(.system(size: 20))
+                .foregroundColor(.blue)
+            
+            VStack(alignment: .leading) {
+                HStack {
+                    Text(URL(fileURLWithPath: mount.mount.source).lastPathComponent)
+                        .font(.title2)
+                        .fontWeight(.semibold)
+                    SwiftUI.Image(systemName: "arrow.right")
+                        .foregroundColor(.secondary)
+                    Text(URL(fileURLWithPath: mount.mount.destination).lastPathComponent)
+                        .font(.title2)
+                        .fontWeight(.semibold)
+                        .foregroundColor(.secondary)
+                    
+                    Spacer()
+                    
+                    Text(mount.mountType)
+                        .font(.subheadline)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 4)
+                        .background(Color.secondary.opacity(0.2))
+                        .cornerRadius(6)
+
+                }
+            }
+        }
+        .padding(16)
+        .background(Color(NSColor.controlBackgroundColor))
+    
+    }
+
+    private func mountOverviewSection() -> some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Overview")
+                .font(.headline)
+                .foregroundColor(.primary)
+
+            VStack(alignment: .leading, spacing: 8) {
+                CopyableInfoRow(label: "Source", value: mount.mount.source)
+                CopyableInfoRow(label: "Destination", value: mount.mount.destination)
+                InfoRow(label: "Type", value: mount.mountType)
+                InfoRow(label: "Containers", value: "\(mount.containerIds.count)")
+
+                if !mount.optionsString.isEmpty {
+                    InfoRow(label: "Options", value: mount.optionsString)
+                }
+            }
+        }
+    }
+
+    private func mountTechnicalSection() -> some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Technical Details")
+                .font(.headline)
+                .foregroundColor(.primary)
+
+            VStack(alignment: .leading, spacing: 8) {
+                if mount.mount.type.virtiofs != nil {
+                    InfoRow(label: "Filesystem", value: "VirtioFS - High-performance shared filesystem")
+                } else if mount.mount.type.tmpfs != nil {
+                    InfoRow(label: "Filesystem", value: "tmpfs - In-memory temporary filesystem")
+                } else {
+                    InfoRow(label: "Filesystem", value: "Unknown mount type")
+                }
+
+                if !mount.mount.options.isEmpty {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("Mount Options:")
+                            .font(.subheadline)
+                            .foregroundColor(.secondary)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+
+                        ForEach(mount.mount.options, id: \.self) { option in
+                            Text("• \(option)")
+                                .font(.subheadline)
+                                .monospaced()
+                                .foregroundColor(.primary)
+                                .padding(.leading, 12)
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    private func containersUsingMountSection() -> some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Containers Using This Mount")
+                .font(.headline)
+                .foregroundColor(.primary)
+
+            if containersUsingMount.isEmpty {
+                Text("No containers are currently using this mount")
+                    .foregroundColor(.secondary)
+                    .italic()
+            } else {
+                VStack(alignment: .leading, spacing: 8) {
+                    ForEach(containersUsingMount, id: \.configuration.id) { container in
+                        MountContainerUsageRow(container: container)
+                    }
+                }
+            }
+        }
+    }
+}
+
+struct MountContainerUsageRow: View {
+    let container: Container
+    @Environment(\.openURL) var openURL
+
+    private var networkAddress: String {
+        guard !container.networks.isEmpty else {
+            return "No network"
+        }
+        return container.networks[0].address.replacingOccurrences(of: "/24", with: "")
+    }
+
+    var body: some View {
+        HStack {
+            Circle()
+                .fill(container.status.lowercased() == "running" ? .green : .gray)
+                .frame(width: 12, height: 12)
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text(container.configuration.id)
+                    .font(.subheadline)
+                    .fontWeight(.medium)
+
+                HStack {
+                    Text(container.status.capitalized)
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+
+                    if !container.networks.isEmpty {
+                        Text("•")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                        Text(networkAddress)
+                            .font(.caption)
+                            .monospaced()
+                            .foregroundColor(.secondary)
+                    }
+                }
+            }
+
+            Spacer()
+
+            Button {
+                // Navigate to container details
+                NotificationCenter.default.post(
+                    name: NSNotification.Name("NavigateToContainer"),
+                    object: container.configuration.id
+                )
+            } label: {
+                SwiftUI.Image(systemName: "chevron.right")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+            }
+            .buttonStyle(.plain)
+            .help("View container details")
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 8)
+        .background(Color(NSColor.controlBackgroundColor).opacity(0.3))
+        .cornerRadius(8)
+        .contextMenu {
+            Button {
+                let pasteboard = NSPasteboard.general
+                pasteboard.clearContents()
+                pasteboard.setString(container.configuration.id, forType: .string)
+            } label: {
+                Label("Copy Container ID", systemImage: "doc.on.doc")
+            }
+
+            if !container.networks.isEmpty {
+                Button {
+                    let pasteboard = NSPasteboard.general
+                    pasteboard.clearContents()
+                    pasteboard.setString(networkAddress, forType: .string)
+                } label: {
+                    Label("Copy IP Address", systemImage: "network")
                 }
             }
         }
