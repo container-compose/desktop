@@ -85,7 +85,7 @@ struct ContentView: View {
     private var sidebarView: some View {
         VStack {
             navigationList
-            Divider()
+            Spacer()
             systemStatusSection
         }
     }
@@ -112,20 +112,20 @@ struct ContentView: View {
     }
 
     private var systemStatusSection: some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(spacing: 12) {
             HStack {
                 Circle()
                     .fill(containerService.systemStatus.color)
-                    .frame(width: 8, height: 8)
+                    .frame(width: 12, height: 12)
                 Text("Containers \(containerService.systemStatus.text)")
-                    .font(.caption)
+                    .font(.subheadline)
                     .foregroundColor(.secondary)
                 Spacer()
             }
+            .padding(.horizontal, 8)
+            .padding(.vertical, 4)
         }
-        .padding(.horizontal)
-        .padding(.top, 4)
-        .padding(.bottom, 12)
+        .padding()
     }
 
     @ViewBuilder
@@ -154,27 +154,16 @@ struct ContentView: View {
         VStack(spacing: 0) {
             // Title bar
             VStack(spacing: 12) {
-                    // Filter picker
-                    Picker("", selection: $filterSelection) {
-                        ForEach(ContainerFilter.allCases, id: \.self) { filter in
-                            Text(filter.rawValue).tag(filter)
-                        }
+                // Filter picker at top
+                Picker("", selection: $filterSelection) {
+                    ForEach(ContainerFilter.allCases, id: \.self) { filter in
+                        Text(filter.rawValue).tag(filter)
                     }
-                    .pickerStyle(SegmentedPickerStyle())
+                }
+                .pickerStyle(SegmentedPickerStyle())
             }
             .padding()
             .background(Color(.windowBackgroundColor))
-
-            // Search field
-            HStack {
-                SwiftUI.Image(systemName: "magnifyingglass")
-                    .foregroundColor(.secondary)
-                TextField("Filter by name...", text: $searchText)
-                    .textFieldStyle(PlainTextFieldStyle())
-            }
-            .padding(.horizontal, 14)
-            .padding(.vertical, 8)
-            .background(Color(.black))
 
             Divider()
 
@@ -200,6 +189,23 @@ struct ContentView: View {
             .listStyle(PlainListStyle())
             .animation(.easeInOut(duration: 0.15), value: filteredContainers.count)
 
+            Divider()
+
+            // Search field at bottom
+            VStack(spacing: 12) {
+                HStack {
+                    SwiftUI.Image(systemName: "magnifyingglass")
+                        .foregroundColor(.secondary)
+                    TextField("Filter containers...", text: $searchText)
+                        .textFieldStyle(PlainTextFieldStyle())
+                }
+                .padding(.horizontal, 8)
+                .padding(.vertical, 4)
+                .background(Color(.black))
+                .cornerRadius(6)
+            }
+            .padding()
+            .background(Color(.controlBackgroundColor))
         }
     }
 
@@ -230,27 +236,11 @@ struct ContentView: View {
     private var imagesList: some View {
         VStack(spacing: 0) {
             // Title bar
-            VStack(spacing: 12) {
-                HStack {
-                    Text("Images")
-                        .font(.title2)
-                        .fontWeight(.semibold)
-                    Spacer()
-                }
-
-                HStack(spacing: 12) {
-                    // Search field
-                    HStack {
-                        SwiftUI.Image(systemName: "magnifyingglass")
-                            .foregroundColor(.secondary)
-                        TextField("Search images...", text: $searchText)
-                            .textFieldStyle(PlainTextFieldStyle())
-                    }
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 4)
-                    .background(Color(.controlBackgroundColor))
-                    .cornerRadius(6)
-                }
+            HStack {
+                Text("Available Images")
+                    .font(.title2)
+                    .fontWeight(.semibold)
+                Spacer()
             }
             .padding()
             .background(Color(.windowBackgroundColor))
@@ -265,6 +255,25 @@ struct ContentView: View {
             }
             .listStyle(PlainListStyle())
             .animation(.easeInOut(duration: 0.15), value: filteredImages.count)
+
+            Divider()
+
+            // Filter controls at bottom
+            VStack(spacing: 12) {
+                // Search field
+                HStack {
+                    SwiftUI.Image(systemName: "magnifyingglass")
+                        .foregroundColor(.secondary)
+                    TextField("Filter images...", text: $searchText)
+                        .textFieldStyle(PlainTextFieldStyle())
+                }
+                .padding(.horizontal, 8)
+                .padding(.vertical, 4)
+                .background(Color(.black))
+                .cornerRadius(6)
+            }
+            .padding()
+            .background(Color(.controlBackgroundColor))
         }
     }
 
