@@ -445,9 +445,6 @@ struct ContentView: View {
             NavigationLink(value: "registry") {
                 Text("Registry")
             }
-            NavigationLink(value: "system") {
-                Text("System")
-            }
         }
     }
 
@@ -481,8 +478,6 @@ struct ContentView: View {
             Text("builds list")
         case "registry":
             Text("registry list")
-        case "system":
-            Text("system list")
         case .none:
             Text("select")
         case .some(_):
