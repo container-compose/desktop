@@ -564,7 +564,7 @@ struct ContentView: View {
 
     private func containerInfoGrid(container: Container) -> some View {
         HStack(alignment: .top) {
-            
+
             HStack {
                 ContainerControlButton(
                     container: container,
@@ -580,12 +580,12 @@ struct ContentView: View {
                         }
                     }
                 )
-                
+
                 Spacer()
             }
             .padding()
 
-            
+
             VStack(alignment: .leading) {
                 Text(container.configuration.id)
                 Text(
@@ -708,12 +708,18 @@ struct ContainerRow: View {
                 }
             }
 
-            ContainerControlButton(
-                container: container,
-                isLoading: isLoading,
-                onStart: { startContainer(container.configuration.id) },
-                onStop: { stopContainer(container.configuration.id) }
-            )
+            if isLoading {
+                Text("Loading...")
+                    .foregroundColor(.gray)
+            } else if container.status.lowercased() == "running" {
+                Button("Stop Container") {
+                    stopContainer(container.configuration.id)
+                }
+            } else {
+                Button("Start Container") {
+                    startContainer(container.configuration.id)
+                }
+            }
         }
     }
 }
