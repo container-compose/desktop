@@ -52,6 +52,15 @@ struct ContentView: View {
                 selectedContainer = containerId
             }
         }
+        .onReceive(
+            NotificationCenter.default.publisher(for: NSNotification.Name("NavigateToImage"))
+        ) { notification in
+            if let imageReference = notification.object as? String {
+                // Switch to images view and select the specific image
+                selection = "images"
+                selectedImage = imageReference
+            }
+        }
     }
 
     private var emptyStateView: some View {
@@ -139,8 +148,8 @@ struct ContentView: View {
                 Text("Images")
                     .badge(containerService.images.count)
             }
-            NavigationLink(value: "volumes") {
-                Text("Volumes")
+            NavigationLink(value: "mounts") {
+                Text("Mounts")
             }
             NavigationLink(value: "builders") {
                 HStack {
@@ -183,8 +192,8 @@ struct ContentView: View {
             containersList
         case "images":
             imagesList
-        case "volumes":
-            Text("volumes list")
+        case "mounts":
+            Text("mounts list")
         case "builders":
             EmptyView()  // This won't be shown since builders use 2-column layout
         case "registry":
@@ -351,8 +360,8 @@ struct ContentView: View {
             containerDetailView
         case "images":
             imageDetailView
-        case "volumes":
-            Text("volume")
+        case "mounts":
+            Text("mounts")
         case "builders":
             builderDetailView
         case "registry":

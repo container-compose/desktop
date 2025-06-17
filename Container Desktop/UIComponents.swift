@@ -330,6 +330,35 @@ struct CopyableInfoRow: View {
     }
 }
 
+struct NavigableInfoRow: View {
+    let label: String
+    let value: String
+    let onNavigate: () -> Void
+
+    var body: some View {
+        HStack {
+            Text(label)
+                .font(.subheadline)
+                .foregroundColor(.secondary)
+                .frame(width: 100, alignment: .leading)
+            Text(value)
+                .font(.subheadline)
+                .monospaced()
+                .textSelection(.enabled)
+            Spacer()
+            Button {
+                onNavigate()
+            } label: {
+                SwiftUI.Image(systemName: "chevron.right")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+            }
+            .buttonStyle(.plain)
+            .help("View image details")
+        }
+    }
+}
+
 // MARK: - View Modifiers
 
 struct CursorModifier: ViewModifier {
