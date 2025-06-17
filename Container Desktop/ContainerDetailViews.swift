@@ -387,6 +387,7 @@ struct ContainerDetailView: View {
 
 struct ContainerImageDetailView: View {
     let image: ContainerImage
+    @EnvironmentObject var containerService: ContainerService
 
     private var imageName: String {
         let components = image.reference.split(separator: "/")
@@ -407,6 +408,12 @@ struct ContainerImageDetailView: View {
 
     private var createdDate: String? {
         image.descriptor.annotations?["org.opencontainers.image.created"]
+    }
+
+    private var containersUsingImage: [Container] {
+        containerService.containers.filter { container in
+            container.configuration.image.reference == image.reference
+        }
     }
 
     var body: some View {
@@ -431,13 +438,21 @@ struct ContainerImageDetailView: View {
             // Scrollable content
             ScrollView {
                 VStack(alignment: .leading, spacing: 20) {
-                    // Overview section
-                    imageOverviewSection()
+                    HStack(alignment: .top, spacing: 20) {
+                        // Overview section
+                        imageOverviewSection()
 
-                    Divider()
+                        Divider()
 
-                    // Technical details section
-                    imageTechnicalSection()
+                        // Technical details section
+                        imageTechnicalSection()
+
+                        Divider()
+
+                    }
+
+                    // Containers using this image section
+                    containersUsingImageSection()
 
                     if let annotations = image.descriptor.annotations, !annotations.isEmpty {
                         Divider()
@@ -531,6 +546,27 @@ struct ContainerImageDetailView: View {
         }
     }
 
+    private func containersUsingImageSection() -> some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Used By Containers")
+                .font(.headline)
+                .foregroundColor(.primary)
+
+            if containersUsingImage.isEmpty {
+                Text("No containers are currently using this image")
+                    .foregroundColor(.secondary)
+                    .font(.subheadline)
+                    .italic()
+            } else {
+                VStack(alignment: .leading, spacing: 8) {
+                    ForEach(containersUsingImage, id: \.configuration.id) { container in
+                        ContainerImageUsageRow(container: container)
+                    }
+                }
+            }
+        }
+    }
+
     private func imageAnnotationsSection(annotations: [String: String]) -> some View {
         VStack(alignment: .leading, spacing: 12) {
             Text("Annotations")
@@ -586,6 +622,66 @@ struct ContainerImageDetailView: View {
             return displayFormatter.string(from: date)
         }
         return dateString
+    }
+}
+
+struct ContainerImageUsageRow: View {
+    let container: Container
+    @Environment(\.openURL) var openURL
+
+    private var networkAddress: String {
+        guard !container.networks.isEmpty else {
+            return "No network"
+        }
+        return container.networks[0].address.replacingOccurrences(of: "/24", with: "")
+    }
+
+    var body: some View {
+        Button(action: {
+            // This will trigger navigation to the container detail view
+            NotificationCenter.default.post(
+                name: NSNotification.Name("NavigateToContainer"),
+                object: container.configuration.id
+            )
+        }) {
+            HStack {
+                Circle()
+                    .fill(container.status.lowercased() == "running" ? .green : .gray)
+                    .frame(width: 8, height: 8)
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(container.configuration.id)
+                        .font(.subheadline)
+                        .fontWeight(.medium)
+                        .foregroundColor(.primary)
+
+                    HStack {
+                        if !container.networks.isEmpty {
+                            Text("•")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+
+                            Text(networkAddress)
+                                .font(.caption)
+                                .monospaced()
+                                .foregroundColor(.secondary)
+                        }
+                    }
+                }
+
+                Spacer()
+
+                SwiftUI.Image(systemName: "chevron.right")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+            }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 8)
+            .background(Color(.controlBackgroundColor))
+            .cornerRadius(8)
+        }
+        .buttonStyle(.plain)
+        .help("Click to view container details")
     }
 }
 

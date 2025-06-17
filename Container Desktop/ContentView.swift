@@ -15,6 +15,7 @@ struct ContentView: View {
 
     @State private var searchText: String = ""
     @State private var filterSelection: ContainerFilter = .all
+    @State private var refreshTimer: Timer?
 
     enum ContainerFilter: String, CaseIterable {
         case all = "All"
@@ -42,7 +43,15 @@ struct ContentView: View {
                 selectedContainer = newContainers[0].configuration.id
             }
         }
-
+        .onReceive(
+            NotificationCenter.default.publisher(for: NSNotification.Name("NavigateToContainer"))
+        ) { notification in
+            if let containerId = notification.object as? String {
+                // Switch to containers view and select the specific container
+                selection = "containers"
+                selectedContainer = containerId
+            }
+        }
     }
 
     private var emptyStateView: some View {
@@ -71,18 +80,44 @@ struct ContentView: View {
     }
 
     private var mainInterfaceView: some View {
-        NavigationSplitView {
-            sidebarView
-        } content: {
-            contentView
-        } detail: {
-            detailView
+        Group {
+            if selection == "builders" {
+                // Two-column layout for builders (no middle column)
+                NavigationSplitView {
+                    sidebarView
+                } detail: {
+                    builderDetailView
+                }
+            } else {
+                // Three-column layout for everything else
+                NavigationSplitView {
+                    sidebarView
+                } content: {
+                    contentView
+                } detail: {
+                    detailView
+                }
+            }
         }
         .task {
             await containerService.checkSystemStatus()
             await containerService.loadContainers()
             await containerService.loadImages()
             await containerService.loadBuilders()
+
+            // Set up periodic refresh timer
+            refreshTimer = Timer.scheduledTimer(withTimeInterval: 5.0, repeats: true) { _ in
+                Task { @MainActor in
+                    await containerService.checkSystemStatus()
+                    await containerService.loadContainers()
+                    await containerService.loadImages()
+                    await containerService.loadBuilders()
+                }
+            }
+        }
+        .onDisappear {
+            refreshTimer?.invalidate()
+            refreshTimer = nil
         }
     }
 
@@ -108,7 +143,15 @@ struct ContentView: View {
                 Text("Volumes")
             }
             NavigationLink(value: "builders") {
-                Text("Builder")
+                HStack {
+                    Text("Builder")
+                    Spacer()
+                    if let builder = containerService.builders.first {
+                        Circle()
+                            .fill(builder.status.lowercased() == "running" ? .green : .gray)
+                            .frame(width: 8, height: 8)
+                    }
+                }
             }
             NavigationLink(value: "registry") {
                 Text("Registry")
@@ -143,8 +186,7 @@ struct ContentView: View {
         case "volumes":
             Text("volumes list")
         case "builders":
-            Text("Select Builder in detail view")
-                .foregroundColor(.secondary)
+            EmptyView()  // This won't be shown since builders use 2-column layout
         case "registry":
             Text("registry list")
         case "system":
@@ -339,6 +381,7 @@ struct ContentView: View {
         ForEach(containerService.images, id: \.reference) { image in
             if selectedImage == image.reference {
                 ContainerImageDetailView(image: image)
+                    .environmentObject(containerService)
             }
         }
     }
