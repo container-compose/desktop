@@ -5,8 +5,10 @@ import SwiftExec
 class ContainerService: ObservableObject {
     @Published var containers: [Container] = []
     @Published var images: [ContainerImage] = []
+    @Published var builders: [Builder] = []
     @Published var isLoading: Bool = false
     @Published var isImagesLoading: Bool = false
+    @Published var isBuildersLoading: Bool = false
     @Published var errorMessage: String?
     @Published var systemStatus: SystemStatus = .unknown
     @Published var isSystemLoading: Bool = false
@@ -116,6 +118,44 @@ class ContainerService: ObservableObject {
             await MainActor.run {
                 self.errorMessage = error.localizedDescription
                 self.isImagesLoading = false
+            }
+            print(error)
+        }
+    }
+
+    func loadBuilders() async {
+        await MainActor.run {
+            isBuildersLoading = true
+            errorMessage = nil
+        }
+
+        var result: ExecResult
+        do {
+            result = try exec(
+                program: "/usr/local/bin/container",
+                arguments: ["builder", "status", "--json"])
+        } catch {
+            let error = error as! ExecError
+            result = error.execResult
+        }
+
+        do {
+            let data = result.stdout?.data(using: .utf8)
+            let newBuilder = try JSONDecoder().decode(
+                Builder.self, from: data!)
+
+            await MainActor.run {
+                withAnimation(.easeInOut(duration: 0.3)) {
+                    self.builders = [newBuilder]
+                }
+                self.isBuildersLoading = false
+            }
+
+            print("Builder: \(newBuilder.configuration.id), Status: \(newBuilder.status)")
+        } catch {
+            await MainActor.run {
+                self.errorMessage = error.localizedDescription
+                self.isBuildersLoading = false
             }
             print(error)
         }
@@ -384,3 +424,4 @@ class ContainerService: ObservableObject {
 // MARK: - Type aliases for JSON decoding
 typealias Containers = [Container]
 typealias Images = [ContainerImage]
+typealias Builders = [Builder]

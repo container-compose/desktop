@@ -211,3 +211,47 @@ struct ContainerImageDescriptor: Codable, Equatable {
         case annotations
     }
 }
+
+// MARK: - Builder Models
+
+struct Builder: Codable, Equatable {
+    let status: String
+    let configuration: BuilderConfiguration
+    let networks: [Network]
+
+    enum CodingKeys: String, CodingKey {
+        case status
+        case configuration
+        case networks
+    }
+}
+
+struct BuilderConfiguration: Codable, Equatable {
+    let id: String
+    let image: Image
+    let initProcess: initProcess
+    let labels: [String: String]
+    let mounts: [Mount]
+    let networks: [String]
+    let platform: Platform
+    let resources: Resources
+    let rosetta: Bool
+    let runtimeHandler: String
+    let sysctls: [String: String]
+    let dns: DNS
+
+    enum CodingKeys: String, CodingKey {
+        case id
+        case image
+        case initProcess
+        case labels
+        case mounts
+        case networks
+        case platform
+        case resources
+        case rosetta
+        case runtimeHandler
+        case sysctls
+        case dns
+    }
+}
