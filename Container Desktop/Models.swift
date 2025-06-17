@@ -1,0 +1,185 @@
+import Foundation
+
+// MARK: - Container Models
+
+struct Container: Codable, Equatable {
+    let status: String
+    let configuration: ContainerConfiguration
+    let networks: [Network]
+
+    enum CodingKeys: String, CodingKey {
+        case status
+        case configuration
+        case networks
+    }
+}
+
+struct ContainerConfiguration: Codable, Equatable {
+    let id: String
+    let hostname: String?
+    let runtimeHandler: String
+    let initProcess: initProcess
+    let mounts: [Mount]
+    let platform: Platform
+    let image: Image
+    let rosetta: Bool
+    let dns: DNS
+    let resources: Resources
+
+    enum CodingKeys: String, CodingKey {
+        case id
+        case hostname
+        case runtimeHandler
+        case initProcess
+        case mounts
+        case platform
+        case image
+        case rosetta
+        case dns
+        case resources
+    }
+}
+
+struct Mount: Codable, Equatable {
+    let type: MountType
+    let source: String
+    let options: [String]
+    let destination: String
+
+    enum CodingKeys: String, CodingKey {
+        case type
+        case source
+        case options
+        case destination
+    }
+}
+
+struct MountType: Codable, Equatable {
+    let tmpfs: Tmpfs?
+    let virtiofs: Virtiofs?
+
+    enum CodingKeys: String, CodingKey {
+        case tmpfs
+        case virtiofs
+    }
+}
+
+struct Tmpfs: Codable, Equatable {
+}
+
+struct Virtiofs: Codable, Equatable {
+}
+
+struct initProcess: Codable, Equatable {
+    let terminal: Bool
+    let environment: [String]
+    let workingDirectory: String
+    let arguments: [String]
+    let executable: String
+    let user: User
+
+    enum CodingKeys: String, CodingKey {
+        case terminal
+        case environment
+        case workingDirectory
+        case arguments
+        case executable
+        case user
+    }
+}
+
+struct User: Codable, Equatable {
+    let id: UserID?
+    let raw: UserRaw?
+
+    enum CodingKeys: String, CodingKey {
+        case id
+        case raw
+    }
+}
+
+struct UserRaw: Codable, Equatable {
+    let userString: String
+
+    enum CodingKeys: String, CodingKey {
+        case userString
+    }
+}
+
+struct UserID: Codable, Equatable {
+    let gid: Int
+    let uid: Int
+
+    enum CodingKeys: String, CodingKey {
+        case gid
+        case uid
+    }
+}
+
+struct Network: Codable, Equatable {
+    let gateway: String
+    let hostname: String
+    let network: String
+    let address: String
+
+    enum CodingKeys: String, CodingKey {
+        case gateway
+        case hostname
+        case network
+        case address
+    }
+}
+
+struct Image: Codable, Equatable {
+    let descriptor: ImageDescriptor
+    let reference: String
+
+    enum CodingKeys: String, CodingKey {
+        case descriptor
+        case reference
+    }
+}
+
+struct ImageDescriptor: Codable, Equatable {
+    let mediaType: String
+    let digest: String
+    let size: Int
+
+    enum CodingKeys: String, CodingKey {
+        case mediaType
+        case digest
+        case size
+    }
+}
+
+struct DNS: Codable, Equatable {
+    let nameservers: [String]
+    let searchDomains: [String]
+    let options: [String]
+
+    enum CodingKeys: String, CodingKey {
+        case nameservers
+        case searchDomains
+        case options
+    }
+}
+
+struct Resources: Codable, Equatable {
+    let cpus: Int
+    let memoryInBytes: Int
+
+    enum CodingKeys: String, CodingKey {
+        case cpus
+        case memoryInBytes
+    }
+}
+
+struct Platform: Codable, Equatable {
+    let os: String
+    let architecture: String
+
+    enum CodingKeys: String, CodingKey {
+        case os
+        case architecture
+    }
+}
