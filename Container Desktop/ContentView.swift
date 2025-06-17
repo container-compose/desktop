@@ -249,25 +249,15 @@ struct ContentView: View {
 
     private var emptyStateView: some View {
         VStack(spacing: 20) {
-            Button {
-                Task { @MainActor in
-                    await containerService.startSystem()
+            PowerButton(
+                isLoading: containerService.isSystemLoading,
+                action: {
+                    Task { @MainActor in
+                        await containerService.startSystem()
+                    }
                 }
-            } label: {
-                
-                SwiftUI.Image(systemName: "power")
-                    .font(SwiftUI.Font.system(size: 60))
-                    .foregroundColor(containerService.isSystemLoading ? SwiftUI.Color.white : SwiftUI.Color.gray)
-                .padding()
-                .background(Color(NSColor.controlBackgroundColor))
-                .cornerRadius(8)
-                
-                
-            }
-            .buttonStyle(.plain)
-            .disabled(containerService.isSystemLoading)
-            .help("Click to start the container system")
-            
+            )
+
 
             Text("Container is not currently runnning")
                 .font(.title2)
@@ -608,6 +598,59 @@ struct ContentView: View {
             Text(
                 "UID: " + String(container.configuration.initProcess.user.id?.uid ?? 0))
         }
+    }
+}
+
+struct PowerButton: View {
+    let isLoading: Bool
+    let action: () -> Void
+    @State private var isHovered = false
+
+    var body: some View {
+        Button(action: action) {
+            SwiftUI.Image(systemName: "power")
+                .font(SwiftUI.Font.system(size: 60))
+                .foregroundColor(buttonColor)
+                .scaleEffect(isHovered ? 1.1 : 1.0)
+        }
+        .buttonStyle(.plain)
+        .disabled(isLoading)
+        .help("Click to start the container system")
+        .onHover { hovering in
+            withAnimation(.easeInOut(duration: 0.2)) {
+                isHovered = hovering && !isLoading
+            }
+        }
+        .modifier(CursorModifier(cursor: isLoading ? .arrow : .pointingHand))
+    }
+
+    private var buttonColor: SwiftUI.Color {
+        if isLoading {
+            return SwiftUI.Color.white
+        } else if isHovered {
+            return SwiftUI.Color.blue
+        } else {
+            return SwiftUI.Color.gray
+        }
+    }
+}
+
+struct CursorModifier: ViewModifier {
+    let cursor: NSCursor
+
+    func body(content: Content) -> some View {
+        content
+            .background(
+                Rectangle()
+                    .fill(Color.clear)
+                    .onHover { hovering in
+                        if hovering {
+                            cursor.push()
+                        } else {
+                            NSCursor.pop()
+                        }
+                    }
+            )
     }
 }
 
