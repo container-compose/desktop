@@ -46,7 +46,6 @@ class ContainerService: ObservableObject {
         await MainActor.run {
             isLoading = true
             errorMessage = nil
-            containers.removeAll()
         }
 
         var result: ExecResult
@@ -61,15 +60,20 @@ class ContainerService: ObservableObject {
 
         do {
             let data = result.stdout?.data(using: .utf8)
-            let containers = try JSONDecoder().decode(
+            let newContainers = try JSONDecoder().decode(
                 Containers.self, from: data!)
 
             await MainActor.run {
-                self.containers = containers
+                // Only update if containers have actually changed
+                if !areContainersEqual(self.containers, newContainers) {
+                    withAnimation(.easeInOut(duration: 0.3)) {
+                        self.containers = newContainers
+                    }
+                }
                 self.isLoading = false
             }
 
-            for container in containers {
+            for container in newContainers {
                 print(container)
             }
         } catch {
@@ -79,6 +83,10 @@ class ContainerService: ObservableObject {
             }
             print(error)
         }
+    }
+
+    private func areContainersEqual(_ old: [Container], _ new: [Container]) -> Bool {
+        return old == new
     }
 
     func stopContainer(_ id: String) async {
@@ -278,24 +286,6 @@ struct ContentView: View {
         } detail: {
             detailView
         }
-        .toolbar {
-            ToolbarItemGroup(placement: .primaryAction) {
-                Button(action: {
-                    Task { @MainActor in
-                        await containerService.loadContainers()
-                    }
-                }) {
-                    Label("Refresh Containers", systemImage: "arrow.clockwise")
-                }
-                .disabled(containerService.isLoading)
-
-                Button(action: {
-                    // Future system start functionality
-                }) {
-                    Label("Start system", systemImage: "play")
-                }
-            }
-        }
         .task {
             await containerService.checkSystemStatus()
             await containerService.loadContainers()
@@ -420,8 +410,10 @@ struct ContentView: View {
                             }
                         }
                     )
+                    .transition(.opacity.combined(with: .scale(scale: 0.95)))
                 }
             }
+            .animation(.easeInOut(duration: 0.3), value: containerService.containers.count)
         }
     }
 
@@ -677,19 +669,19 @@ struct CursorModifier: ViewModifier {
         .environmentObject(ContainerService())
 }
 
-struct Container: Codable {
+struct Container: Codable, Equatable {
     let status: String
     let configuration: ContainerConfiguration
     let networks: [Network]
 
     enum CodingKeys: String, CodingKey {
         case status = "status"
-        case networks = "networks"
         case configuration = "configuration"
+        case networks = "networks"
     }
 }
 
-struct ContainerConfiguration: Codable {
+struct ContainerConfiguration: Codable, Equatable {
     let id: String
     let hostname: String?
     let runtimeHandler: String
@@ -715,7 +707,7 @@ struct ContainerConfiguration: Codable {
     }
 }
 
-struct Mount: Codable {
+struct Mount: Codable, Equatable {
     let type: MountType
     let source: String
     let options: [String]
@@ -729,7 +721,7 @@ struct Mount: Codable {
     }
 }
 
-struct MountType: Codable {
+struct MountType: Codable, Equatable {
     let tmpfs: Tmpfs?
     let virtiofs: Virtiofs?
 
@@ -739,15 +731,15 @@ struct MountType: Codable {
     }
 }
 
-struct Tmpfs: Codable {
+struct Tmpfs: Codable, Equatable {
     // TODO: implement
 }
 
-struct Virtiofs: Codable {
+struct Virtiofs: Codable, Equatable {
     // TODO: implement
 }
 
-struct initProcess: Codable {
+struct initProcess: Codable, Equatable {
     let terminal: Bool
     let environment: [String]
     let workingDirectory: String
@@ -771,7 +763,7 @@ struct initProcess: Codable {
     }
 }
 
-struct User: Codable {
+struct User: Codable, Equatable {
     let id: UserID?
     let raw: UserRaw?
 
@@ -781,7 +773,7 @@ struct User: Codable {
     }
 }
 
-struct UserRaw: Codable {
+struct UserRaw: Codable, Equatable {
     let userString: String
 
     enum CodingKeys: String, CodingKey {
@@ -789,7 +781,7 @@ struct UserRaw: Codable {
     }
 }
 
-struct UserID: Codable {
+struct UserID: Codable, Equatable {
     let gid: Int
     let uid: Int
 
@@ -799,7 +791,7 @@ struct UserID: Codable {
     }
 }
 
-struct Network: Codable {
+struct Network: Codable, Equatable {
     let gateway: String
     let hostname: String
     let network: String
@@ -813,7 +805,7 @@ struct Network: Codable {
     }
 }
 
-struct Image: Codable {
+struct Image: Codable, Equatable {
     let descriptor: ImageDescriptor
     let reference: String
 
@@ -823,7 +815,7 @@ struct Image: Codable {
     }
 }
 
-struct ImageDescriptor: Codable {
+struct ImageDescriptor: Codable, Equatable {
     let mediaType: String
     let digest: String
     let size: Int
@@ -835,7 +827,7 @@ struct ImageDescriptor: Codable {
     }
 }
 
-struct DNS: Codable {
+struct DNS: Codable, Equatable {
     let nameservers: [String]
     let searchDomains: [String]
     let options: [String]
@@ -847,7 +839,7 @@ struct DNS: Codable {
     }
 }
 
-struct Resources: Codable {
+struct Resources: Codable, Equatable {
     let cpus: Int
     let memoryInBytes: Int
 
@@ -857,7 +849,7 @@ struct Resources: Codable {
     }
 }
 
-struct Platform: Codable {
+struct Platform: Codable, Equatable {
     let os: String
     let architecture: String
 
