@@ -543,133 +543,208 @@ struct ContentView: View {
     private var containerDetailView: some View {
         ForEach(containerService.containers, id: \.configuration.id) { container in
             if selectedContainer == container.configuration.id {
-                ScrollView {
-                    VStack(alignment: .leading) {
-                        containerInfoGrid(container: container)
+                VStack(alignment: .leading, spacing: 0) {
+                    // Header with controls
+                    containerHeader(container: container)
 
-                        Divider()
+                    Divider()
 
-                        containerProcessInfo(container: container)
+                    // Scrollable content
+                    ScrollView {
+                        VStack(alignment: .leading, spacing: 20) {
+                            containerOverviewSection(container: container)
+                            containerImageSection(container: container)
+                            containerNetworkSection(container: container)
+                            containerResourcesSection(container: container)
+                            containerProcessSection(container: container)
 
-                        Divider()
-
-                        containerUserInfo(container: container)
-
-                        Spacer()
+                            Spacer(minLength: 20)
+                        }
+                        .padding()
                     }
                 }
             }
         }
     }
 
-    private func containerInfoGrid(container: Container) -> some View {
-        HStack(alignment: .top) {
+    private func containerHeader(container: Container) -> some View {
+        HStack {
+            VStack(alignment: .leading, spacing: 4) {
+                Text(container.configuration.hostname ?? "Unknown Container")
+                    .font(.title2)
+                    .fontWeight(.semibold)
 
-            HStack {
-                ContainerControlButton(
-                    container: container,
-                    isLoading: containerService.loadingContainers.contains(container.configuration.id),
-                    onStart: {
-                        Task { @MainActor in
-                            await containerService.startContainer(container.configuration.id)
-                        }
-                    },
-                    onStop: {
-                        Task { @MainActor in
-                            await containerService.stopContainer(container.configuration.id)
-                        }
-                    }
-                )
-
-                Spacer()
-            }
-            .padding()
-
-
-            VStack(alignment: .leading) {
-                Text(container.configuration.id)
-                Text(
-                    container.configuration.image.descriptor.digest
-                        .replacingOccurrences(of: "sha256:", with: "").prefix(12))
-                Text(String(container.configuration.image.descriptor.size))
-            }
-
-            Spacer()
-
-            VStack(alignment: .leading) {
-                Text(container.configuration.image.descriptor.mediaType)
-                Text(container.configuration.image.reference)
-                Text(
-                    container.configuration.platform.os + "/"
-                        + container.configuration.platform.architecture)
-                Text(container.configuration.runtimeHandler)
-            }
-
-            Spacer()
-
-            VStack(alignment: .leading) {
-                Text("Hostname: " + (container.configuration.hostname ?? ""))
-
-                Text(
-                    "Nameservers: "
-                        + container.configuration.dns.nameservers.joined())
-                Text(
-                    "Search Domains: "
-                        + container.configuration.dns.searchDomains.joined())
-                Text("Options: " + container.configuration.dns.options.joined())
-
-                Divider()
-
-                ForEach(container.networks, id: \.hostname) { network in
-                    Text("Gateway: " + network.gateway)
-                    Text("Hostname: " + network.hostname)
-                    Text("Network: " + network.network)
-                    Text("Address: " + network.address)
-                    Divider()
+                HStack(spacing: 8) {
+                    Circle()
+                        .fill(container.status.lowercased() == "running" ? .green : .gray)
+                        .frame(width: 8, height: 8)
+                    Text(container.status.capitalized)
+                        .font(.subheadline)
+                        .foregroundColor(.secondary)
                 }
             }
 
             Spacer()
 
-            VStack(alignment: .leading) {
-                Text("Rosetta: " + String(container.configuration.rosetta))
-                Text("CPUs: " + String(container.configuration.resources.cpus))
-                Text(
-                    "Memory: "
-                        + String(container.configuration.resources.memoryInBytes))
-            }
-
-            Spacer()
+            ContainerControlButton(
+                container: container,
+                isLoading: containerService.loadingContainers.contains(container.configuration.id),
+                onStart: {
+                    Task { @MainActor in
+                        await containerService.startContainer(container.configuration.id)
+                    }
+                },
+                onStop: {
+                    Task { @MainActor in
+                        await containerService.stopContainer(container.configuration.id)
+                    }
+                }
+            )
         }
         .padding()
+        .background(Color(NSColor.controlBackgroundColor))
     }
 
-    private func containerProcessInfo(container: Container) -> some View {
-        VStack(alignment: .leading) {
-            Text("Terminal: " + String(container.configuration.initProcess.terminal))
-            Text(
-                "Environment: "
-                    + String(container.configuration.initProcess.environment.joined()))
-            Text(
-                "Working Directory: "
-                    + String(container.configuration.initProcess.workingDirectory))
-            Text(
-                "Arguments: "
-                    + String(container.configuration.initProcess.arguments.joined()))
-            Text(
-                "Executable: " + String(container.configuration.initProcess.executable))
+    private func containerOverviewSection(container: Container) -> some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Overview")
+                .font(.headline)
+                .foregroundColor(.primary)
+
+            VStack(alignment: .leading, spacing: 8) {
+                InfoRow(label: "Container ID", value: container.configuration.id)
+                InfoRow(label: "Runtime", value: container.configuration.runtimeHandler)
+                InfoRow(label: "Platform", value: "\(container.configuration.platform.os)/\(container.configuration.platform.architecture)")
+                if let hostname = container.configuration.hostname {
+                    InfoRow(label: "Hostname", value: hostname)
+                }
+            }
         }
     }
 
-    private func containerUserInfo(container: Container) -> some View {
-        VStack(alignment: .leading) {
-            Text(
-                "User: "
-                    + (container.configuration.initProcess.user.raw?.userString ?? ""))
-            Text(
-                "GID: " + String(container.configuration.initProcess.user.id?.gid ?? 0))
-            Text(
-                "UID: " + String(container.configuration.initProcess.user.id?.uid ?? 0))
+    private func containerImageSection(container: Container) -> some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Image")
+                .font(.headline)
+                .foregroundColor(.primary)
+
+            VStack(alignment: .leading, spacing: 8) {
+                InfoRow(label: "Reference", value: container.configuration.image.reference)
+                InfoRow(label: "Media Type", value: container.configuration.image.descriptor.mediaType)
+                InfoRow(label: "Digest", value: String(container.configuration.image.descriptor.digest.replacingOccurrences(of: "sha256:", with: "").prefix(12)))
+                InfoRow(label: "Size", value: ByteCountFormatter().string(fromByteCount: Int64(container.configuration.image.descriptor.size)))
+            }
+        }
+    }
+
+    private func containerNetworkSection(container: Container) -> some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Network")
+                .font(.headline)
+                .foregroundColor(.primary)
+
+            if !container.networks.isEmpty {
+                ForEach(container.networks, id: \.hostname) { network in
+                    VStack(alignment: .leading, spacing: 8) {
+                        InfoRow(label: "Address", value: network.address)
+                        InfoRow(label: "Gateway", value: network.gateway)
+                        InfoRow(label: "Network", value: network.network)
+                        if network.hostname != container.configuration.hostname {
+                            InfoRow(label: "Network Hostname", value: network.hostname)
+                        }
+                    }
+                    .padding()
+                    .background(Color(NSColor.controlBackgroundColor).opacity(0.5))
+                    .cornerRadius(8)
+                }
+
+                // DNS Configuration
+                if !container.configuration.dns.nameservers.isEmpty || !container.configuration.dns.searchDomains.isEmpty {
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("DNS Configuration")
+                            .font(.subheadline)
+                            .fontWeight(.medium)
+
+                        if !container.configuration.dns.nameservers.isEmpty {
+                            InfoRow(label: "Nameservers", value: container.configuration.dns.nameservers.joined(separator: ", "))
+                        }
+                        if !container.configuration.dns.searchDomains.isEmpty {
+                            InfoRow(label: "Search Domains", value: container.configuration.dns.searchDomains.joined(separator: ", "))
+                        }
+                        if !container.configuration.dns.options.isEmpty {
+                            InfoRow(label: "Options", value: container.configuration.dns.options.joined(separator: ", "))
+                        }
+                    }
+                }
+            } else {
+                Text("No network configuration")
+                    .foregroundColor(.secondary)
+                    .italic()
+            }
+        }
+    }
+
+    private func containerResourcesSection(container: Container) -> some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Resources")
+                .font(.headline)
+                .foregroundColor(.primary)
+
+            VStack(alignment: .leading, spacing: 8) {
+                InfoRow(label: "CPUs", value: "\(container.configuration.resources.cpus)")
+                InfoRow(label: "Memory", value: ByteCountFormatter().string(fromByteCount: Int64(container.configuration.resources.memoryInBytes)))
+                InfoRow(label: "Rosetta", value: container.configuration.rosetta ? "Enabled" : "Disabled")
+            }
+        }
+    }
+
+    private func containerProcessSection(container: Container) -> some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Process Configuration")
+                .font(.headline)
+                .foregroundColor(.primary)
+
+            VStack(alignment: .leading, spacing: 8) {
+                InfoRow(label: "Executable", value: container.configuration.initProcess.executable)
+                InfoRow(label: "Working Directory", value: container.configuration.initProcess.workingDirectory)
+                InfoRow(label: "Terminal", value: container.configuration.initProcess.terminal ? "Enabled" : "Disabled")
+
+                if !container.configuration.initProcess.arguments.isEmpty {
+                    InfoRow(label: "Arguments", value: container.configuration.initProcess.arguments.joined(separator: " "))
+                }
+
+                if !container.configuration.initProcess.environment.isEmpty {
+                    InfoRow(label: "Environment", value: "\(container.configuration.initProcess.environment.count) variables")
+                }
+
+                // User information
+                if let userString = container.configuration.initProcess.user.raw?.userString {
+                    InfoRow(label: "User", value: userString)
+                }
+                if let userId = container.configuration.initProcess.user.id {
+                    InfoRow(label: "UID:GID", value: "\(userId.uid):\(userId.gid)")
+                }
+            }
+        }
+    }
+
+    // Helper view for consistent info rows
+    private struct InfoRow: View {
+        let label: String
+        let value: String
+
+        var body: some View {
+            HStack(alignment: .top) {
+                Text(label)
+                    .font(.subheadline)
+                    .foregroundColor(.secondary)
+                    .frame(width: 120, alignment: .leading)
+
+                Text(value)
+                    .font(.subheadline)
+                    .textSelection(.enabled)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
         }
     }
 }
