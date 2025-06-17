@@ -53,13 +53,41 @@ class ContainerService: ObservableObject {
         }
     }
 
+    func stopContainer(_ id: String) async {
+        await MainActor.run {
+            isLoading = true
+            errorMessage = nil
+        }
+
+        var result: ExecResult
+        do {
+            result = try exec(
+                program: "/usr/local/bin/container",
+                arguments: ["stop", id])
+
+            await MainActor.run {
+                self.isLoading = false
+            }
+
+            print("Container \(id) stopped successfully")
+            // Reload containers to refresh the status
+            await loadContainers()
+
+        } catch {
+            let error = error as! ExecError
+            result = error.execResult
+
+            await MainActor.run {
+                self.errorMessage = "Failed to stop container: \(error.localizedDescription)"
+                self.isLoading = false
+            }
+            print("Error stopping container: \(error)")
+        }
+    }
+
     // Future commands can be added here
     func startContainer(_ id: String) async {
         // Implementation for starting a container
-    }
-
-    func stopContainer(_ id: String) async {
-        // Implementation for stopping a container
     }
 }
 
@@ -120,6 +148,17 @@ struct ContentView: View {
                                 } label: {
                                     Label("Copy IP address", systemImage: "network")
                                 }
+
+                                Button {
+                                    Task {
+                                        await containerService.stopContainer(
+                                            container.configuration.id)
+                                    }
+                                } label: {
+                                    Label("Stop Container", systemImage: "stop.fill")
+                                }
+                                .disabled(
+                                    containerService.isLoading || container.status != "running")
                             }
                         }
                     }
@@ -212,6 +251,21 @@ struct ContentView: View {
                                             + String(
                                                 container.configuration.resources.memoryInBytes))
                                 }
+
+                                Spacer()
+                            }
+
+                            HStack {
+                                Button {
+                                    Task {
+                                        await containerService.stopContainer(
+                                            container.configuration.id)
+                                    }
+                                } label: {
+                                    Label("Stop Container", systemImage: "stop.fill")
+                                }
+                                .disabled(
+                                    containerService.isLoading || container.status != "running")
 
                                 Spacer()
                             }
