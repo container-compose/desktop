@@ -17,6 +17,7 @@ struct Container_DesktopApp: App {
             ContentView()
                 .environmentObject(containerService)
         }
+        .windowStyle(.hiddenTitleBar)
 
         MenuBarExtra("Container Desktop", systemImage: "cube.box") {
             MenuBarView()
