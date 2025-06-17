@@ -12,6 +12,7 @@ struct ContentView: View {
     @State private var selection: String?
     @State private var selectedContainer: String?
     @State private var selectedImage: String?
+    @State private var selectedBuilder: String?
     @State private var searchText: String = ""
     @State private var filterSelection: ContainerFilter = .all
 
@@ -41,6 +42,12 @@ struct ContentView: View {
                 selectedContainer = newContainers[0].configuration.id
             }
         }
+        .onChange(of: containerService.builders) { _, newBuilders in
+            // Auto-select first builder when builders load
+            if selectedBuilder == nil && !newBuilders.isEmpty {
+                selectedBuilder = newBuilders[0].configuration.id
+            }
+        }
     }
 
     private var emptyStateView: some View {
@@ -64,6 +71,7 @@ struct ContentView: View {
             await containerService.checkSystemStatus()
             await containerService.loadContainers()
             await containerService.loadImages()
+            await containerService.loadBuilders()
         }
     }
 
@@ -79,6 +87,7 @@ struct ContentView: View {
             await containerService.checkSystemStatus()
             await containerService.loadContainers()
             await containerService.loadImages()
+            await containerService.loadBuilders()
         }
     }
 
@@ -98,12 +107,14 @@ struct ContentView: View {
             }
             NavigationLink(value: "images") {
                 Text("Images")
+                    .badge(containerService.images.count)
             }
             NavigationLink(value: "volumes") {
                 Text("Volumes")
             }
-            NavigationLink(value: "builds") {
-                Text("Builds")
+            NavigationLink(value: "builders") {
+                Text("Builders")
+                    .badge(containerService.builders.count)
             }
             NavigationLink(value: "registry") {
                 Text("Registry")
@@ -137,8 +148,8 @@ struct ContentView: View {
             imagesList
         case "volumes":
             Text("volumes list")
-        case "builds":
-            Text("builds list")
+        case "builders":
+            buildersList
         case "registry":
             Text("registry list")
         case "system":
@@ -290,6 +301,63 @@ struct ContentView: View {
         return filtered
     }
 
+    private var buildersList: some View {
+        VStack(spacing: 0) {
+            // Title bar
+            HStack {
+                Text("Container Builders")
+                    .font(.title2)
+                    .fontWeight(.semibold)
+                Spacer()
+            }
+            .padding()
+            .background(Color(.windowBackgroundColor))
+
+            Divider()
+
+            // Builders list
+            List(selection: $selectedBuilder) {
+                ForEach(filteredBuilders, id: \.configuration.id) { builder in
+                    BuilderRow(builder: builder)
+                }
+            }
+            .listStyle(PlainListStyle())
+            .animation(.easeInOut(duration: 0.15), value: filteredBuilders.count)
+
+            Divider()
+
+            // Search field at bottom
+            VStack(spacing: 12) {
+                HStack {
+                    SwiftUI.Image(systemName: "magnifyingglass")
+                        .foregroundColor(.secondary)
+                    TextField("Filter builders...", text: $searchText)
+                        .textFieldStyle(PlainTextFieldStyle())
+                }
+                .padding(.horizontal, 8)
+                .padding(.vertical, 4)
+                .background(Color(.black))
+                .cornerRadius(6)
+            }
+            .padding()
+            .background(Color(.controlBackgroundColor))
+        }
+    }
+
+    private var filteredBuilders: [Builder] {
+        var filtered = containerService.builders
+
+        // Apply search filter
+        if !searchText.isEmpty {
+            filtered = filtered.filter { builder in
+                builder.configuration.id.localizedCaseInsensitiveContains(searchText) ||
+                builder.status.localizedCaseInsensitiveContains(searchText)
+            }
+        }
+
+        return filtered
+    }
+
     @ViewBuilder
     private var detailView: some View {
         switch selection {
@@ -299,8 +367,8 @@ struct ContentView: View {
             imageDetailView
         case "volumes":
             Text("volume")
-        case "builds":
-            Text("build")
+        case "builders":
+            builderDetailView
         case "registry":
             Text("registry")
         case "system":
@@ -327,6 +395,15 @@ struct ContentView: View {
         ForEach(containerService.images, id: \.reference) { image in
             if selectedImage == image.reference {
                 ContainerImageDetailView(image: image)
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var builderDetailView: some View {
+        ForEach(containerService.builders, id: \.configuration.id) { builder in
+            if selectedBuilder == builder.configuration.id {
+                BuilderDetailView(builder: builder)
             }
         }
     }

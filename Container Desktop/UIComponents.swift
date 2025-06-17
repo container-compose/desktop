@@ -3,6 +3,62 @@ import AppKit
 
 // MARK: - Container Components
 
+struct BuilderRow: View {
+    let builder: Builder
+
+    private var networkAddress: String {
+        guard !builder.networks.isEmpty else {
+            return "No network"
+        }
+        return builder.networks[0].address.replacingOccurrences(of: "/24", with: "")
+    }
+
+    var body: some View {
+        NavigationLink(value: builder.configuration.id) {
+            HStack {
+                SwiftUI.Image(systemName: "hammer")
+                    .foregroundColor(.orange)
+                    .frame(width: 16, height: 16)
+
+                VStack(alignment: .leading) {
+                    Text(builder.configuration.id)
+                        .font(.headline)
+                    HStack {
+                        Text(builder.status.capitalized)
+                            .font(.subheadline)
+                            .foregroundColor(builder.status.lowercased() == "running" ? .green : .secondary)
+                        Spacer()
+                        Text(networkAddress)
+                            .font(.caption)
+                            .monospaced()
+                            .foregroundColor(.secondary)
+                    }
+                }
+            }
+        }
+        .padding(8)
+        .contextMenu {
+            if !builder.networks.isEmpty {
+                Button {
+                    let pasteboard = NSPasteboard.general
+                    pasteboard.clearContents()
+                    pasteboard.setString(networkAddress, forType: .string)
+                } label: {
+                    Label("Copy IP address", systemImage: "network")
+                }
+            }
+
+            Button {
+                let pasteboard = NSPasteboard.general
+                pasteboard.clearContents()
+                pasteboard.setString(builder.configuration.id, forType: .string)
+            } label: {
+                Label("Copy Builder ID", systemImage: "doc.on.doc")
+            }
+        }
+    }
+}
+
 struct ContainerImageRow: View {
     let image: ContainerImage
 

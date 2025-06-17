@@ -531,3 +531,216 @@ struct ContainerImageDetailView: View {
         return dateString
     }
 }
+
+struct BuilderDetailView: View {
+    let builder: Builder
+
+    private var networkAddress: String {
+        guard !builder.networks.isEmpty else {
+            return "No network"
+        }
+        return builder.networks[0].address.replacingOccurrences(of: "/24", with: "")
+    }
+
+    var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 20) {
+                builderHeader()
+                builderOverviewSection()
+                builderImageSection()
+                builderNetworkSection()
+                builderResourcesSection()
+                builderProcessSection()
+                builderMountsSection()
+            }
+            .padding()
+        }
+        .navigationTitle("Builder Details")
+    }
+
+    @ViewBuilder
+    func builderHeader() -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack {
+                SwiftUI.Image(systemName: "hammer")
+                    .font(.title)
+                    .foregroundColor(.orange)
+                Text(builder.configuration.id)
+                    .font(.title)
+                    .fontWeight(.bold)
+                Spacer()
+                Text(builder.status.capitalized)
+                    .font(.headline)
+                    .foregroundColor(builder.status.lowercased() == "running" ? .green : .red)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 4)
+                    .background(
+                        RoundedRectangle(cornerRadius: 8)
+                            .fill(builder.status.lowercased() == "running" ? .green.opacity(0.1) : .red.opacity(0.1))
+                    )
+            }
+        }
+    }
+
+    @ViewBuilder
+    func builderOverviewSection() -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("Overview")
+                .font(.headline)
+                .fontWeight(.semibold)
+
+            VStack(alignment: .leading, spacing: 4) {
+                InfoRow(label: "Status", value: builder.status)
+                InfoRow(label: "Platform", value: "\(builder.configuration.platform.os)/\(builder.configuration.platform.architecture)")
+                InfoRow(label: "Runtime", value: builder.configuration.runtimeHandler)
+                InfoRow(label: "Rosetta", value: builder.configuration.rosetta ? "Enabled" : "Disabled")
+            }
+        }
+    }
+
+    @ViewBuilder
+    func builderImageSection() -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("Image")
+                .font(.headline)
+                .fontWeight(.semibold)
+
+            VStack(alignment: .leading, spacing: 4) {
+                CopyableInfoRow(label: "Reference", value: builder.configuration.image.reference)
+                CopyableInfoRow(label: "Digest", value: builder.configuration.image.descriptor.digest)
+                InfoRow(label: "Size", value: ByteCountFormatter().string(fromByteCount: Int64(builder.configuration.image.descriptor.size)))
+                InfoRow(label: "Media Type", value: builder.configuration.image.descriptor.mediaType)
+            }
+        }
+    }
+
+    @ViewBuilder
+    func builderNetworkSection() -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("Network")
+                .font(.headline)
+                .fontWeight(.semibold)
+
+            if builder.networks.isEmpty {
+                Text("No networks configured")
+                    .foregroundColor(.secondary)
+                    .font(.subheadline)
+            } else {
+                ForEach(builder.networks.indices, id: \.self) { index in
+                    let network = builder.networks[index]
+                    VStack(alignment: .leading, spacing: 4) {
+                        if builder.networks.count > 1 {
+                            Text("Network \(index + 1)")
+                                .font(.subheadline)
+                                .fontWeight(.medium)
+                        }
+                        CopyableInfoRow(label: "Address", value: network.address)
+                        InfoRow(label: "Gateway", value: network.gateway)
+                        InfoRow(label: "Hostname", value: network.hostname)
+                        InfoRow(label: "Network", value: network.network)
+
+                        if builder.configuration.dns.nameservers.count > 0 {
+                            InfoRow(label: "DNS", value: builder.configuration.dns.nameservers.joined(separator: ", "))
+                        }
+                    }
+                    if index < builder.networks.count - 1 {
+                        Divider()
+                    }
+                }
+            }
+        }
+    }
+
+    @ViewBuilder
+    func builderResourcesSection() -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("Resources")
+                .font(.headline)
+                .fontWeight(.semibold)
+
+            VStack(alignment: .leading, spacing: 4) {
+                InfoRow(label: "CPUs", value: "\(builder.configuration.resources.cpus)")
+                InfoRow(label: "Memory", value: ByteCountFormatter().string(fromByteCount: Int64(builder.configuration.resources.memoryInBytes)))
+            }
+        }
+    }
+
+    @ViewBuilder
+    func builderProcessSection() -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("Process")
+                .font(.headline)
+                .fontWeight(.semibold)
+
+            VStack(alignment: .leading, spacing: 4) {
+                InfoRow(label: "Executable", value: builder.configuration.initProcess.executable)
+                InfoRow(label: "Working Dir", value: builder.configuration.initProcess.workingDirectory)
+                InfoRow(label: "Terminal", value: builder.configuration.initProcess.terminal ? "Yes" : "No")
+
+                if let userId = builder.configuration.initProcess.user.id {
+                    InfoRow(label: "User ID", value: "\(userId.uid):\(userId.gid)")
+                }
+
+                if !builder.configuration.initProcess.arguments.isEmpty {
+                    Text("Arguments")
+                        .font(.subheadline)
+                        .fontWeight(.medium)
+                        .padding(.top, 4)
+
+                    ForEach(builder.configuration.initProcess.arguments.indices, id: \.self) { index in
+                        HStack {
+                            Text("[\(index)]")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                                .frame(width: 30, alignment: .leading)
+                            Text(builder.configuration.initProcess.arguments[index])
+                                .font(.subheadline)
+                                .monospaced()
+                                .textSelection(.enabled)
+                            Spacer()
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    @ViewBuilder
+    func builderMountsSection() -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("Mounts")
+                .font(.headline)
+                .fontWeight(.semibold)
+
+            if builder.configuration.mounts.isEmpty {
+                Text("No mounts configured")
+                    .foregroundColor(.secondary)
+                    .font(.subheadline)
+            } else {
+                ForEach(builder.configuration.mounts.indices, id: \.self) { index in
+                    let mount = builder.configuration.mounts[index]
+                    VStack(alignment: .leading, spacing: 4) {
+                        if builder.configuration.mounts.count > 1 {
+                            Text("Mount \(index + 1)")
+                                .font(.subheadline)
+                                .fontWeight(.medium)
+                        }
+                        InfoRow(label: "Source", value: mount.source.isEmpty ? "tmpfs" : mount.source)
+                        InfoRow(label: "Destination", value: mount.destination)
+                        if mount.type.tmpfs != nil {
+                            InfoRow(label: "Type", value: "tmpfs")
+                        } else if mount.type.virtiofs != nil {
+                            InfoRow(label: "Type", value: "virtiofs")
+                        }
+                        if !mount.options.isEmpty {
+                            InfoRow(label: "Options", value: mount.options.joined(separator: ", "))
+                        }
+                    }
+                    if index < builder.configuration.mounts.count - 1 {
+                        Divider()
+                    }
+                }
+            }
+        }
+    }
+}
