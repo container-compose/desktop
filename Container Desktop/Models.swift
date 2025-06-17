@@ -212,6 +212,35 @@ struct ContainerImageDescriptor: Codable, Equatable {
     }
 }
 
+// MARK: - Mount Models
+
+struct ContainerMount: Identifiable, Equatable {
+    let id: String
+    let mount: Mount
+    let containerIds: [String]
+
+    init(mount: Mount, containerIds: [String]) {
+        self.mount = mount
+        self.containerIds = containerIds
+        // Create a unique ID based on source and destination
+        self.id = "\(mount.source)->\(mount.destination)"
+    }
+
+    var mountType: String {
+        if mount.type.virtiofs != nil {
+            return "VirtioFS"
+        } else if mount.type.tmpfs != nil {
+            return "tmpfs"
+        } else {
+            return "Unknown"
+        }
+    }
+
+    var optionsString: String {
+        mount.options.joined(separator: ", ")
+    }
+}
+
 // MARK: - Builder Models
 
 struct Builder: Codable, Equatable {
