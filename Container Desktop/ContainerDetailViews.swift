@@ -153,7 +153,16 @@ struct ContainerDetailView: View {
                 .foregroundColor(.primary)
 
             VStack(alignment: .leading, spacing: 8) {
-                InfoRow(label: "Reference", value: container.configuration.image.reference)
+                NavigableInfoRow(
+                    label: "Reference",
+                    value: container.configuration.image.reference,
+                    onNavigate: {
+                        NotificationCenter.default.post(
+                            name: NSNotification.Name("NavigateToImage"),
+                            object: container.configuration.image.reference
+                        )
+                    }
+                )
                 InfoRow(
                     label: "Media Type", value: container.configuration.image.descriptor.mediaType)
                 CopyableInfoRow(
@@ -844,7 +853,16 @@ struct BuilderDetailView: View {
                 .fontWeight(.semibold)
 
             VStack(alignment: .leading, spacing: 4) {
-                CopyableInfoRow(label: "Reference", value: builder.configuration.image.reference)
+                NavigableInfoRow(
+                    label: "Reference",
+                    value: builder.configuration.image.reference,
+                    onNavigate: {
+                        NotificationCenter.default.post(
+                            name: NSNotification.Name("NavigateToImage"),
+                            object: builder.configuration.image.reference
+                        )
+                    }
+                )
                 CopyableInfoRow(
                     label: "Digest", value: builder.configuration.image.descriptor.digest)
                 InfoRow(
