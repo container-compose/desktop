@@ -11,7 +11,7 @@ import SwiftUI
 struct Container_DesktopApp: App {
     var body: some Scene {
         WindowGroup {
-            ContentView(allContainers: [])
+            ContentView()
         }
     }
 }
