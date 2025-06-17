@@ -12,7 +12,7 @@ struct ContentView: View {
     @State private var selection: String?
     @State private var selectedContainer: String?
     @State private var selectedImage: String?
-    @State private var selectedBuilder: String?
+
     @State private var searchText: String = ""
     @State private var filterSelection: ContainerFilter = .all
 
@@ -42,12 +42,7 @@ struct ContentView: View {
                 selectedContainer = newContainers[0].configuration.id
             }
         }
-        .onChange(of: containerService.builders) { _, newBuilders in
-            // Auto-select first builder when builders load
-            if selectedBuilder == nil && !newBuilders.isEmpty {
-                selectedBuilder = newBuilders[0].configuration.id
-            }
-        }
+
     }
 
     private var emptyStateView: some View {
@@ -113,8 +108,7 @@ struct ContentView: View {
                 Text("Volumes")
             }
             NavigationLink(value: "builders") {
-                Text("Builders")
-                    .badge(containerService.builders.count)
+                Text("Builder")
             }
             NavigationLink(value: "registry") {
                 Text("Registry")
@@ -128,7 +122,7 @@ struct ContentView: View {
                 Circle()
                     .fill(containerService.systemStatus.color)
                     .frame(width: 12, height: 12)
-                Text("Containers \(containerService.systemStatus.text)")
+                Text("Container \(containerService.systemStatus.text)")
                     .font(.subheadline)
                     .foregroundColor(.secondary)
                 Spacer()
@@ -149,7 +143,8 @@ struct ContentView: View {
         case "volumes":
             Text("volumes list")
         case "builders":
-            buildersList
+            Text("Select Builder in detail view")
+                .foregroundColor(.secondary)
         case "registry":
             Text("registry list")
         case "system":
@@ -183,7 +178,8 @@ struct ContentView: View {
                 ForEach(filteredContainers, id: \.configuration.id) { container in
                     ContainerRow(
                         container: container,
-                        isLoading: containerService.loadingContainers.contains(container.configuration.id),
+                        isLoading: containerService.loadingContainers.contains(
+                            container.configuration.id),
                         stopContainer: { id in
                             Task { @MainActor in
                                 await containerService.stopContainer(id)
@@ -236,8 +232,8 @@ struct ContentView: View {
         // Apply search filter
         if !searchText.isEmpty {
             filtered = filtered.filter { container in
-                container.configuration.id.localizedCaseInsensitiveContains(searchText) ||
-                container.status.localizedCaseInsensitiveContains(searchText)
+                container.configuration.id.localizedCaseInsensitiveContains(searchText)
+                    || container.status.localizedCaseInsensitiveContains(searchText)
             }
         }
 
@@ -301,63 +297,6 @@ struct ContentView: View {
         return filtered
     }
 
-    private var buildersList: some View {
-        VStack(spacing: 0) {
-            // Title bar
-            HStack {
-                Text("Container Builders")
-                    .font(.title2)
-                    .fontWeight(.semibold)
-                Spacer()
-            }
-            .padding()
-            .background(Color(.windowBackgroundColor))
-
-            Divider()
-
-            // Builders list
-            List(selection: $selectedBuilder) {
-                ForEach(filteredBuilders, id: \.configuration.id) { builder in
-                    BuilderRow(builder: builder)
-                }
-            }
-            .listStyle(PlainListStyle())
-            .animation(.easeInOut(duration: 0.15), value: filteredBuilders.count)
-
-            Divider()
-
-            // Search field at bottom
-            VStack(spacing: 12) {
-                HStack {
-                    SwiftUI.Image(systemName: "magnifyingglass")
-                        .foregroundColor(.secondary)
-                    TextField("Filter builders...", text: $searchText)
-                        .textFieldStyle(PlainTextFieldStyle())
-                }
-                .padding(.horizontal, 8)
-                .padding(.vertical, 4)
-                .background(Color(.black))
-                .cornerRadius(6)
-            }
-            .padding()
-            .background(Color(.controlBackgroundColor))
-        }
-    }
-
-    private var filteredBuilders: [Builder] {
-        var filtered = containerService.builders
-
-        // Apply search filter
-        if !searchText.isEmpty {
-            filtered = filtered.filter { builder in
-                builder.configuration.id.localizedCaseInsensitiveContains(searchText) ||
-                builder.status.localizedCaseInsensitiveContains(searchText)
-            }
-        }
-
-        return filtered
-    }
-
     @ViewBuilder
     private var detailView: some View {
         switch selection {
@@ -401,10 +340,51 @@ struct ContentView: View {
 
     @ViewBuilder
     private var builderDetailView: some View {
-        ForEach(containerService.builders, id: \.configuration.id) { builder in
-            if selectedBuilder == builder.configuration.id {
-                BuilderDetailView(builder: builder)
+        if containerService.builders.isEmpty {
+            // No builder exists - show start interface
+            VStack(spacing: 20) {
+                VStack(spacing: 12) {
+                    SwiftUI.Image(systemName: "hammer.fill")
+                        .font(.system(size: 48))
+                        .foregroundColor(.secondary)
+
+                    Text("No Builder Running")
+                        .font(.title2)
+                        .fontWeight(.medium)
+
+                    Text("Start the container builder to build images locally")
+                        .font(.subheadline)
+                        .foregroundColor(.secondary)
+                        .multilineTextAlignment(.center)
+                }
+
+                Button(action: {
+                    Task { @MainActor in
+                        await containerService.startBuilder()
+                    }
+                }) {
+                    HStack {
+                        if containerService.isBuilderLoading {
+                            ProgressView()
+                                .scaleEffect(0.8)
+                                .frame(width: 16, height: 16)
+                        } else {
+                            SwiftUI.Image(systemName: "play.fill")
+                        }
+                        Text("Start Builder")
+                    }
+                    .frame(minWidth: 120)
+                    .padding(.horizontal, 24)
+                    .padding(.vertical, 12)
+                }
+                .buttonStyle(.borderedProminent)
+                .disabled(containerService.isBuilderLoading)
             }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .padding()
+        } else if let builder = containerService.builders.first {
+            BuilderDetailView(builder: builder)
+                .environmentObject(containerService)
         }
     }
 }
