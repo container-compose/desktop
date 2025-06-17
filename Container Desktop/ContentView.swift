@@ -13,6 +13,34 @@ class ContainerService: ObservableObject {
     @Published var containers: [Container] = []
     @Published var isLoading: Bool = false
     @Published var errorMessage: String?
+    @Published var systemStatus: SystemStatus = .unknown
+    @Published var isSystemLoading: Bool = false
+
+    enum SystemStatus {
+        case unknown
+        case stopped
+        case running
+
+        var color: Color {
+            switch self {
+            case .unknown, .stopped:
+                return .gray
+            case .running:
+                return .green
+            }
+        }
+
+        var text: String {
+            switch self {
+            case .unknown:
+                return "Unknown"
+            case .stopped:
+                return "Stopped"
+            case .running:
+                return "Running"
+            }
+        }
+    }
 
     func loadContainers() async {
         await MainActor.run {
@@ -85,6 +113,120 @@ class ContainerService: ObservableObject {
         }
     }
 
+    func checkSystemStatus() async {
+        var result: ExecResult
+        do {
+            result = try exec(
+                program: "/usr/local/bin/container",
+                arguments: ["system", "status"])
+
+            await MainActor.run {
+                // Assuming the command returns success when running
+                self.systemStatus = .running
+            }
+        } catch {
+            await MainActor.run {
+                self.systemStatus = .stopped
+            }
+        }
+    }
+
+    func startSystem() async {
+        await MainActor.run {
+            isSystemLoading = true
+            errorMessage = nil
+        }
+
+        var result: ExecResult
+        do {
+            result = try exec(
+                program: "/usr/local/bin/container",
+                arguments: ["system", "start"])
+
+            await MainActor.run {
+                self.isSystemLoading = false
+                self.systemStatus = .running
+            }
+
+            print("Container system started successfully")
+            await loadContainers()
+
+        } catch {
+            let error = error as! ExecError
+            result = error.execResult
+
+            await MainActor.run {
+                self.errorMessage = "Failed to start system: \(error.localizedDescription)"
+                self.isSystemLoading = false
+            }
+            print("Error starting system: \(error)")
+        }
+    }
+
+    func stopSystem() async {
+        await MainActor.run {
+            isSystemLoading = true
+            errorMessage = nil
+        }
+
+        var result: ExecResult
+        do {
+            result = try exec(
+                program: "/usr/local/bin/container",
+                arguments: ["system", "stop"])
+
+            await MainActor.run {
+                self.isSystemLoading = false
+                self.systemStatus = .stopped
+                self.containers.removeAll()
+            }
+
+            print("Container system stopped successfully")
+
+        } catch {
+            let error = error as! ExecError
+            result = error.execResult
+
+            await MainActor.run {
+                self.errorMessage = "Failed to stop system: \(error.localizedDescription)"
+                self.isSystemLoading = false
+            }
+            print("Error stopping system: \(error)")
+        }
+    }
+
+    func restartSystem() async {
+        await MainActor.run {
+            isSystemLoading = true
+            errorMessage = nil
+        }
+
+        var result: ExecResult
+        do {
+            result = try exec(
+                program: "/usr/local/bin/container",
+                arguments: ["system", "restart"])
+
+            await MainActor.run {
+                self.isSystemLoading = false
+                self.systemStatus = .running
+            }
+
+            print("Container system restarted successfully")
+            await loadContainers()
+
+        } catch {
+            let error = error as! ExecError
+            result = error.execResult
+
+            await MainActor.run {
+                self.errorMessage = "Failed to restart system: \(error.localizedDescription)"
+                self.isSystemLoading = false
+            }
+            print("Error restarting system: \(error)")
+        }
+    }
+
     // Future commands can be added here
     func startContainer(_ id: String) async {
         // Implementation for starting a container
@@ -100,26 +242,80 @@ struct ContentView: View {
     var body: some View {
 
         NavigationSplitView {
-            List(selection: $selection) {
-                NavigationLink(value: "containers") {
-                    Text("Containers")
-                        .badge(containerService.containers.count)
+            VStack {
+                List(selection: $selection) {
+                    NavigationLink(value: "containers") {
+                        Text("Containers")
+                            .badge(containerService.containers.count)
+                    }
+                    NavigationLink(value: "images") {
+                        Text("Images")
+                    }
+                    NavigationLink(value: "volumes") {
+                        Text("Volumes")
+                    }
+                    NavigationLink(value: "builds") {
+                        Text("Builds")
+                    }
+                    NavigationLink(value: "registry") {
+                        Text("Registry")
+                    }
+                    NavigationLink(value: "system") {
+                        Text("System")
+                    }
                 }
-                NavigationLink(value: "images") {
-                    Text("Images")
+
+                Divider()
+
+                // System Status Section
+                VStack(alignment: .leading, spacing: 8) {
+                    HStack {
+                        Circle()
+                            .fill(containerService.systemStatus.color)
+                            .frame(width: 8, height: 8)
+                        Text("System: \(containerService.systemStatus.text)")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                        Spacer()
+                    }
+
+                    HStack(spacing: 4) {
+                        Button("Start") {
+                            Task {
+                                await containerService.startSystem()
+                            }
+                        }
+                        .buttonStyle(.borderless)
+                        .font(.caption)
+                        .disabled(
+                            containerService.isSystemLoading
+                                || containerService.systemStatus == .running)
+
+                        Button("Stop") {
+                            Task {
+                                await containerService.stopSystem()
+                            }
+                        }
+                        .buttonStyle(.borderless)
+                        .font(.caption)
+                        .disabled(
+                            containerService.isSystemLoading
+                                || containerService.systemStatus == .stopped)
+
+                        Button("Restart") {
+                            Task {
+                                await containerService.restartSystem()
+                            }
+                        }
+                        .buttonStyle(.borderless)
+                        .font(.caption)
+                        .disabled(containerService.isSystemLoading)
+
+                        Spacer()
+                    }
                 }
-                NavigationLink(value: "volumes") {
-                    Text("Volumes")
-                }
-                NavigationLink(value: "builds") {
-                    Text("Builds")
-                }
-                NavigationLink(value: "registry") {
-                    Text("Registry")
-                }
-                NavigationLink(value: "system") {
-                    Text("System")
-                }
+                .padding(.horizontal)
+                .padding(.bottom, 8)
             }
         } content: {
             switch selection {
@@ -334,6 +530,7 @@ struct ContentView: View {
             }
         }
         .task {
+            await containerService.checkSystemStatus()
             await containerService.loadContainers()
         }
     }
