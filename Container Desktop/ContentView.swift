@@ -8,9 +8,64 @@
 import SwiftExec
 import SwiftUI
 
+// MARK: - Container Service
+class ContainerService: ObservableObject {
+    @Published var containers: [Container] = []
+    @Published var isLoading: Bool = false
+    @Published var errorMessage: String?
+
+    func loadContainers() async {
+        await MainActor.run {
+            isLoading = true
+            errorMessage = nil
+            containers.removeAll()
+        }
+
+        var result: ExecResult
+        do {
+            result = try exec(
+                program: "/usr/local/bin/container",
+                arguments: ["ls", "--format", "json"])
+        } catch {
+            let error = error as! ExecError
+            result = error.execResult
+        }
+
+        do {
+            let data = result.stdout?.data(using: .utf8)
+            let containers = try JSONDecoder().decode(
+                Containers.self, from: data!)
+
+            await MainActor.run {
+                self.containers = containers
+                self.isLoading = false
+            }
+
+            for container in containers {
+                print(container)
+            }
+        } catch {
+            await MainActor.run {
+                self.errorMessage = error.localizedDescription
+                self.isLoading = false
+            }
+            print(error)
+        }
+    }
+
+    // Future commands can be added here
+    func startContainer(_ id: String) async {
+        // Implementation for starting a container
+    }
+
+    func stopContainer(_ id: String) async {
+        // Implementation for stopping a container
+    }
+}
+
 struct ContentView: View {
 
-    @State var allContainers: [Container]
+    @StateObject private var containerService = ContainerService()
     @State private var selection: String?
     @State private var selectedContainer: String?
 
@@ -20,30 +75,7 @@ struct ContentView: View {
             List(selection: $selection) {
                 NavigationLink(value: "containers") {
                     Text("Containers")
-                        .badge(allContainers.count)
-                        .task {
-                            var result: ExecResult
-                            do {
-                                result = try exec(
-                                    program: "/usr/local/bin/container",
-                                    arguments: ["ls", "--format", "json"])
-                            } catch {
-                                let error = error as! ExecError
-                                result = error.execResult
-                            }
-
-                            do {
-                                let data = result.stdout?.data(using: .utf8)
-                                let containers = try JSONDecoder().decode(
-                                    Containers.self, from: data!)
-                                for container in containers {
-                                    allContainers.append(container)
-                                    print(container)
-                                }
-                            } catch {
-                                print(error)
-                            }
-                        }
+                        .badge(containerService.containers.count)
                 }
                 NavigationLink(value: "images") {
                     Text("Images")
@@ -66,7 +98,7 @@ struct ContentView: View {
             case "containers":
                 VStack {
                     List(selection: $selectedContainer) {
-                        ForEach(allContainers, id: \.configuration.id) { container in
+                        ForEach(containerService.containers, id: \.configuration.id) { container in
                             NavigationLink(value: container.configuration.id) {
                                 VStack(alignment: .leading) {
                                     Text(container.configuration.hostname ?? "Unknown")
@@ -110,7 +142,7 @@ struct ContentView: View {
         } detail: {
             switch selection {
             case "containers":
-                ForEach(allContainers, id: \.configuration.id) { container in
+                ForEach(containerService.containers, id: \.configuration.id) { container in
                     if selectedContainer == container.configuration.id {
                         VStack(alignment: .leading) {
                             HStack(alignment: .top) {
@@ -230,17 +262,31 @@ struct ContentView: View {
             }
         }
         .toolbar {
-            Button(action: {
+            ToolbarItemGroup(placement: .primaryAction) {
+                Button(action: {
+                    Task {
+                        await containerService.loadContainers()
+                    }
+                }) {
+                    Label("Refresh Containers", systemImage: "arrow.clockwise")
+                }
+                .disabled(containerService.isLoading)
 
-            }) {
-                Label("Start system", systemImage: "play")
+                Button(action: {
+                    // Future system start functionality
+                }) {
+                    Label("Start system", systemImage: "play")
+                }
             }
+        }
+        .task {
+            await containerService.loadContainers()
         }
     }
 }
 
 #Preview {
-    ContentView(allContainers: [])
+    ContentView()
 }
 
 struct Container: Codable {
