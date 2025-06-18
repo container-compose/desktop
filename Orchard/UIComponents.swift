@@ -578,6 +578,24 @@ struct AppFooter: View {
 
             Spacer()
 
+            // Update indicator (when available)
+            if containerService.updateAvailable {
+                Button(action: {
+                    containerService.openReleasesPage()
+                }) {
+                    HStack(spacing: 4) {
+                        SwiftUI.Image(systemName: "arrow.down.circle")
+                            .foregroundColor(.blue)
+                            .font(.system(size: 12))
+                        Text("Update Available")
+                            .font(.system(size: 11))
+                            .foregroundColor(.blue)
+                    }
+                }
+                .buttonStyle(.plain)
+                .help("New version \(containerService.latestVersion ?? "") is available. Click to download.")
+            }
+
             // Right side - Separate System and Builder Status
             HStack(spacing: 12) {
                 // Container System Status

@@ -19,6 +19,24 @@ struct OrchardApp: App {
 
         }
         .windowToolbarStyle(.unifiedCompact)
+        .commands {
+            CommandGroup(replacing: .help) {
+                Button("Check for Updates...") {
+                    Task {
+                        await containerService.checkForUpdatesManually()
+                    }
+                }
+                .keyboardShortcut("u", modifiers: [.command, .option])
+
+                Divider()
+
+                Button("Orchard Help") {
+                    if let url = URL(string: "https://github.com/\(containerService.githubRepo)") {
+                        NSWorkspace.shared.open(url)
+                    }
+                }
+            }
+        }
 
         Settings {
             SettingsView()

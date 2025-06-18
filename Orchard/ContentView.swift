@@ -286,6 +286,11 @@ struct ContentView: View {
             await containerService.loadRegistries(showLoading: true)
             await containerService.loadDNSDomains(showLoading: true)
 
+            // Check for updates on startup
+            if containerService.shouldCheckForUpdates() {
+                await containerService.checkForUpdates()
+            }
+
             startRefreshTimer()
         }
         .onDisappear {
@@ -305,6 +310,11 @@ struct ContentView: View {
                 await containerService.loadBuilders()
                 await containerService.loadRegistries(showLoading: false)
                 await containerService.loadDNSDomains(showLoading: false)
+
+                // Check for updates periodically
+                if containerService.shouldCheckForUpdates() {
+                    await containerService.checkForUpdates()
+                }
             }
         }
     }
