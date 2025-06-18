@@ -112,7 +112,6 @@ class ContainerService: ObservableObject {
                 Containers.self, from: data!)
 
             await MainActor.run {
-                // Only update if containers have actually changed
                 if !areContainersEqual(self.containers, newContainers) {
                     withAnimation(.easeInOut(duration: 0.3)) {
                         self.containers = newContainers
@@ -199,9 +198,9 @@ class ContainerService: ObservableObject {
                     await MainActor.run {
                         withAnimation(.easeInOut(duration: 0.3)) {
                             self.builders = [newBuilder]
-                            // Use the builder's actual status
-                            self.builderStatus = newBuilder.status.lowercased() == "running" ? .running : .stopped
                         }
+                        // Update status without animation to prevent flicker
+                        self.builderStatus = newBuilder.status.lowercased() == "running" ? .running : .stopped
                         self.isBuildersLoading = false
                     }
                     print("Builder: \(newBuilder.configuration.id), Status: \(newBuilder.status)")
@@ -213,12 +212,12 @@ class ContainerService: ObservableObject {
                         await MainActor.run {
                             withAnimation(.easeInOut(duration: 0.3)) {
                                 self.builders = newBuilders
-                                // Use the first builder's status, or stopped if no builders
-                                if let firstBuilder = newBuilders.first {
-                                    self.builderStatus = firstBuilder.status.lowercased() == "running" ? .running : .stopped
-                                } else {
-                                    self.builderStatus = .stopped
-                                }
+                            }
+                            // Update status without animation to prevent flicker
+                            if let firstBuilder = newBuilders.first {
+                                self.builderStatus = firstBuilder.status.lowercased() == "running" ? .running : .stopped
+                            } else {
+                                self.builderStatus = .stopped
                             }
                             self.isBuildersLoading = false
                         }

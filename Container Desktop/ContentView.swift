@@ -9,7 +9,7 @@ import SwiftUI
 
 struct ContentView: View {
     @EnvironmentObject var containerService: ContainerService
-    @State private var selection: String?
+    @State private var selectedTab: TabSelection = .containers
     @State private var selectedContainer: String?
     @State private var selectedImage: String?
     @State private var selectedMount: String?
@@ -24,6 +24,34 @@ struct ContentView: View {
         case stopped = "Stopped"
     }
 
+    enum TabSelection: String, CaseIterable {
+        case containers = "containers"
+        case images = "images"
+        case mounts = "mounts"
+
+        var icon: String {
+            switch self {
+            case .containers:
+                return "cube.box"
+            case .images:
+                return "square.3.layers.3d"
+            case .mounts:
+                return "externaldrive"
+            }
+        }
+
+        var title: String {
+            switch self {
+            case .containers:
+                return "Containers"
+            case .images:
+                return "Images"
+            case .mounts:
+                return "Mounts"
+            }
+        }
+    }
+
     var body: some View {
         Group {
             if containerService.systemStatus == .stopped {
@@ -33,27 +61,24 @@ struct ContentView: View {
             }
         }
         .onAppear {
-            // Set default selections when app launches
-            if selection == nil {
-                selection = "containers"
-            }
+            // Default tab is already set to containers
         }
         .onChange(of: containerService.containers) { _, newContainers in
             // Auto-select first container when containers load
             if selectedContainer == nil && !newContainers.isEmpty {
                 selectedContainer = newContainers[0].configuration.id
             }
-            // Auto-select first mount when mounts change
             if selectedMount == nil && !containerService.allMounts.isEmpty {
                 selectedMount = containerService.allMounts[0].id
             }
         }
+
         .onReceive(
             NotificationCenter.default.publisher(for: NSNotification.Name("NavigateToContainer"))
         ) { notification in
             if let containerId = notification.object as? String {
                 // Switch to containers view and select the specific container
-                selection = "containers"
+                selectedTab = .containers
                 selectedContainer = containerId
             }
         }
@@ -62,7 +87,7 @@ struct ContentView: View {
         ) { notification in
             if let imageReference = notification.object as? String {
                 // Switch to images view and select the specific image
-                selection = "images"
+                selectedTab = .images
                 selectedImage = imageReference
             }
         }
@@ -71,7 +96,7 @@ struct ContentView: View {
         ) { notification in
             if let mountId = notification.object as? String {
                 // Switch to mounts view and select the specific mount
-                selection = "mounts"
+                selectedTab = .mounts
                 selectedMount = mountId
             }
         }
@@ -104,15 +129,17 @@ struct ContentView: View {
 
     private var mainInterfaceView: some View {
         NavigationSplitView {
-            sidebarView
+            primaryColumnView
                 .navigationSplitViewColumnWidth(
-                    min: 250, ideal: 250, max: 250)
-        } content: {
-            contentView
-                .navigationSplitViewColumnWidth(
-                    min: 300, ideal: 300, max: 300)
+                    min: 400, ideal: 500, max: 600)
         } detail: {
             detailView
+        }
+        .toolbar {
+            ToolbarItem(placement: .primaryAction) {
+                systemStatusView
+                    .padding(.trailing, 8)
+            }
         }
         .task {
             await containerService.checkSystemStatus()
@@ -136,75 +163,93 @@ struct ContentView: View {
         }
     }
 
-    private var sidebarView: some View {
-        VStack {
-            navigationList
-            Spacer()
-            systemStatusSection
+    private var primaryColumnView: some View {
+        VStack(spacing: 0) {
+            Divider()
+            tabNavigationView
+            Divider()
+            selectedContentView
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
-    private var navigationList: some View {
-        List(selection: $selection) {
-            NavigationLink(value: "containers") {
-                Text("Containers")
-                    .badge(containerService.containers.count)
-            }
-            NavigationLink(value: "images") {
-                Text("Images")
-                    .badge(containerService.images.count)
-            }
-            NavigationLink(value: "mounts") {
-                Text("Mounts")
-                    .badge(containerService.allMounts.count)
-            }
-
-        }
-    }
-
-    private var systemStatusSection: some View {
-        VStack {
-            HStack {
-                HStack {
-                    Circle()
-                        .fill(containerService.systemStatus.color)
-                        .frame(width: 12, height: 12)
-                    Text("Container")
+    private var tabNavigationView: some View {
+        VStack(spacing: 0) {
+            HStack(spacing: 20) {
+                ForEach(TabSelection.allCases, id: \.self) { tab in
+                    tabButton(for: tab)
                 }
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 8)
 
-                Spacer()
+            Rectangle()
+                .fill(Color(NSColor.separatorColor))
+                .frame(height: 0.5)
+        }
+        .transaction { transaction in
+            transaction.animation = nil
+        }
+    }
 
-                HStack {
-                    Circle()
-                        .fill(containerService.builderStatus.color)
-                        .frame(width: 12, height: 12)
-                    Text("Builder")
-                }
+    private func tabButton(for tab: TabSelection) -> some View {
+        Button(action: {
+            selectedTab = tab
+        }) {
+            HStack(spacing: 6) {
+                SwiftUI.Image(systemName: tab.icon)
+                    .font(.system(size: 14, weight: .medium))
+                Text(tab.title)
+                    .font(.system(size: 13, weight: .medium))
+            }
+            .foregroundColor(selectedTab == tab ? .blue : .secondary)
+            .padding(.horizontal, 8)
+            .padding(.vertical, 4)
+        }
+        .buttonStyle(PlainButtonStyle())
+    }
 
-                Spacer()
+
+
+    private var selectedContentView: some View {
+        Group {
+            switch selectedTab {
+            case .containers:
+                containersList
+            case .images:
+                imagesList
+            case .mounts:
+                mountsList
             }
         }
-        .padding()
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
-    @ViewBuilder
-    private var contentView: some View {
-        switch selection {
-        case "containers":
-            containersList
-        case "images":
-            imagesList
-        case "mounts":
-            mountsList
+    private var systemStatusView: some View {
+        HStack(spacing: 8) {
+            Circle()
+                .fill(containerService.systemStatus.color)
+                .frame(width: 10, height: 10)
+                .help("Container System: \(containerService.systemStatus.text)")
 
-        case "system":
-            Text("system list")
-        case .none:
-            Text("select")
-        case .some(_):
-            Text("select")
+            Circle()
+                .fill(containerService.builderStatus.color)
+                .frame(width: 10, height: 10)
+                .help("Builder: \(containerService.builderStatus.text)")
+        }
+        .transaction { transaction in
+            transaction.animation = nil
         }
     }
+
+
+
+
+
+
+
+
+
 
     private var containersList: some View {
         VStack(spacing: 0) {
@@ -235,9 +280,14 @@ struct ContentView: View {
                 }
             }
             .listStyle(PlainListStyle())
-            .animation(.easeInOut(duration: 0.15), value: filteredContainers.count)
+            .animation(.easeInOut(duration: 0.3), value: containerService.containers)
 
-            Divider()
+            Rectangle()
+                .fill(Color(NSColor.separatorColor))
+                .frame(height: 0.5)
+                .transaction { transaction in
+                    transaction.animation = nil
+                }
 
             VStack(spacing: 12) {
 
@@ -309,9 +359,16 @@ struct ContentView: View {
                 }
             }
             .listStyle(PlainListStyle())
-            .animation(.easeInOut(duration: 0.15), value: filteredImages.count)
+            .animation(.easeInOut(duration: 0.3), value: containerService.images)
 
-            Divider()
+
+
+            Rectangle()
+                .fill(Color(NSColor.separatorColor))
+                .frame(height: 0.5)
+                .transaction { transaction in
+                    transaction.animation = nil
+                }
 
             // Filter controls at bottom
             VStack(spacing: 12) {
@@ -326,6 +383,9 @@ struct ContentView: View {
                 .padding(.vertical, 4)
                 .background(Color(.black))
                 .cornerRadius(6)
+                .transaction { transaction in
+                    transaction.animation = nil
+                }
             }
             .padding()
             .background(Color(.controlBackgroundColor))
@@ -347,20 +407,13 @@ struct ContentView: View {
 
     @ViewBuilder
     private var detailView: some View {
-        switch selection {
-        case "containers":
+        switch selectedTab {
+        case .containers:
             containerDetailView
-        case "images":
+        case .images:
             imageDetailView
-        case "mounts":
+        case .mounts:
             mountDetailView
-
-        case "system":
-            Text("system")
-        case .none:
-            Text("select")
-        case .some(_):
-            Text("select")
         }
     }
 
@@ -390,12 +443,18 @@ struct ContentView: View {
             List(selection: $selectedMount) {
                 ForEach(filteredMounts, id: \.id) { mount in
                     MountRow(mount: mount)
+                        .tag(mount.id)
                 }
             }
             .listStyle(PlainListStyle())
-            .animation(.easeInOut(duration: 0.15), value: filteredMounts.count)
+            .animation(.easeInOut(duration: 0.3), value: containerService.allMounts)
 
-            Divider()
+            Rectangle()
+                .fill(Color(NSColor.separatorColor))
+                .frame(height: 0.5)
+                .transaction { transaction in
+                    transaction.animation = nil
+                }
 
             // Filter controls at bottom
             VStack(spacing: 12) {
@@ -410,6 +469,9 @@ struct ContentView: View {
                 .padding(.vertical, 4)
                 .background(Color(.black))
                 .cornerRadius(6)
+                .transaction { transaction in
+                    transaction.animation = nil
+                }
             }
             .padding()
             .background(Color(.controlBackgroundColor))
