@@ -235,9 +235,15 @@ class ContainerService: ObservableObject {
     }
 
     func loadContainers() async {
-        await MainActor.run {
-            isLoading = true
-            errorMessage = nil
+        await loadContainers(showLoading: false)
+    }
+
+    func loadContainers(showLoading: Bool = true) async {
+        if showLoading {
+            await MainActor.run {
+                isLoading = true
+                errorMessage = nil
+            }
         }
 
         var result: ExecResult
@@ -394,9 +400,15 @@ class ContainerService: ObservableObject {
     }
 
     func loadRegistries() async {
-        await MainActor.run {
-            isRegistriesLoading = true
-            errorMessage = nil
+        await loadRegistries(showLoading: false)
+    }
+
+    func loadRegistries(showLoading: Bool = true) async {
+        if showLoading {
+            await MainActor.run {
+                isRegistriesLoading = true
+                errorMessage = nil
+            }
         }
 
         do {
@@ -425,12 +437,16 @@ class ContainerService: ObservableObject {
             await MainActor.run {
                 self.registries = registryList
                 self.defaultRegistry = defaultRegistry
-                self.isRegistriesLoading = false
+                if showLoading {
+                    self.isRegistriesLoading = false
+                }
             }
         } catch {
             await MainActor.run {
-                self.errorMessage = "Failed to load registries: \(error.localizedDescription)"
-                self.isRegistriesLoading = false
+                if showLoading {
+                    self.errorMessage = "Failed to load registries: \(error.localizedDescription)"
+                    self.isRegistriesLoading = false
+                }
             }
         }
     }
@@ -882,8 +898,14 @@ class ContainerService: ObservableObject {
     // MARK: - DNS Management
 
     func loadDNSDomains() async {
-        await MainActor.run {
-            isDNSLoading = true
+        await loadDNSDomains(showLoading: false)
+    }
+
+    func loadDNSDomains(showLoading: Bool = true) async {
+        if showLoading {
+            await MainActor.run {
+                isDNSLoading = true
+            }
         }
 
         do {
@@ -902,13 +924,17 @@ class ContainerService: ObservableObject {
                 let domains = parseDNSDomains(output, defaultDomain: defaultDomain)
                 await MainActor.run {
                     self.dnsDomains = domains
-                    self.isDNSLoading = false
+                    if showLoading {
+                        self.isDNSLoading = false
+                    }
                 }
             }
         } catch {
             await MainActor.run {
-                self.errorMessage = "Failed to load DNS domains: \(error.localizedDescription)"
-                self.isDNSLoading = false
+                if showLoading {
+                    self.errorMessage = "Failed to load DNS domains: \(error.localizedDescription)"
+                    self.isDNSLoading = false
+                }
             }
         }
     }

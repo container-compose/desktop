@@ -76,25 +76,6 @@ struct SettingsView: View {
                 .tag(SettingsTab.kernel)
         }
         .frame(width: 600, height: 500)
-        .task {
-            await containerService.loadDNSDomains()
-            await containerService.loadKernelConfig()
-            await containerService.loadRegistries()
-        }
-        .onAppear {
-            Task {
-                await containerService.loadDNSDomains()
-                await containerService.loadKernelConfig()
-                await containerService.loadRegistries()
-            }
-        }
-        .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in
-            Task {
-                await containerService.loadDNSDomains()
-                await containerService.loadKernelConfig()
-                await containerService.loadRegistries()
-            }
-        }
         .alert("Error", isPresented: $showingErrorAlert) {
             Button("OK", role: .cancel) { }
         } message: {
@@ -125,21 +106,6 @@ struct SettingsView: View {
 
     private var generalView: some View {
         VStack(spacing: 20) {
-            VStack(alignment: .leading, spacing: 8) {
-                HStack {
-                    SwiftUI.Image(systemName: "gearshape")
-                        .font(.title2)
-                        .foregroundColor(.blue)
-                    Text("General Settings")
-                        .font(.title2)
-                        .fontWeight(.semibold)
-                }
-
-                Text("Configure general application settings")
-                    .font(.subheadline)
-                    .foregroundColor(.secondary)
-            }
-
             // Custom Binary Path Section
             VStack(alignment: .leading, spacing: 12) {
                 HStack {
@@ -188,6 +154,7 @@ struct SettingsView: View {
                     }
                     .buttonStyle(.bordered)
                     .controlSize(.small)
+                    .disabled(!containerService.isUsingCustomBinary)
                 }
 
                 HStack {
@@ -278,32 +245,6 @@ struct SettingsView: View {
 
     private var dnsView: some View {
         VStack(spacing: 20) {
-            VStack(alignment: .leading, spacing: 8) {
-                HStack {
-                    SwiftUI.Image(systemName: "network")
-                        .font(.title2)
-                        .foregroundColor(.green)
-                    Text("DNS Domains")
-                        .font(.title2)
-                        .fontWeight(.semibold)
-
-                    Spacer()
-
-                    Button(action: {
-                        showAddDNSDomainDialog()
-                    }) {
-                        Label("Add Domain", systemImage: "plus")
-                    }
-                    .buttonStyle(.borderedProminent)
-                }
-
-                Text("Manage local DNS domains for container networking")
-                    .font(.subheadline)
-                    .foregroundColor(.secondary)
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
-
-            Divider()
 
             if containerService.isDNSLoading {
                 VStack {
@@ -346,7 +287,12 @@ struct SettingsView: View {
                 }
             }
 
-            Spacer()
+            Button(action: {
+                showAddDNSDomainDialog()
+            }) {
+                Label("Add Domain", systemImage: "plus")
+            }
+            .buttonStyle(.borderedProminent)
         }
         .padding(20)
     }
@@ -429,122 +375,36 @@ struct SettingsView: View {
 
     private var kernelView: some View {
         VStack(spacing: 20) {
-            VStack(alignment: .leading, spacing: 8) {
+            VStack(alignment: .leading, spacing: 16) {
                 HStack {
                     SwiftUI.Image(systemName: "cpu")
                         .font(.title2)
                         .foregroundColor(.purple)
+
                     Text("Kernel Configuration")
                         .font(.title2)
                         .fontWeight(.semibold)
                 }
 
-                Text("Manage the default kernel configuration for containers")
+                Text("Custom kernel configuration will be supported in a future version of Orchard.")
                     .font(.subheadline)
                     .foregroundColor(.secondary)
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
 
-            Divider()
+                Text("For now, the system uses the default recommended kernel configuration automatically.")
+                    .font(.subheadline)
+                    .foregroundColor(.secondary)
 
-            if containerService.isKernelLoading {
-                VStack {
-                    ProgressView()
-                        .scaleEffect(0.8)
-                    Text("Configuring kernel...")
+                HStack {
+                    SwiftUI.Image(systemName: "checkmark.circle.fill")
+                        .foregroundColor(.green)
+                    Text("Using recommended kernel configuration")
                         .font(.subheadline)
-                        .foregroundColor(.secondary)
-                }
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-            } else {
-                VStack(spacing: 24) {
-                    // Recommended Kernel Section
-                    VStack(alignment: .leading, spacing: 12) {
-                        Text("Recommended Kernel")
-                            .font(.headline)
-                            .foregroundColor(.primary)
-
-                        Text("Use the recommended kernel configuration. This is the easiest option and works for most use cases.")
-                            .font(.subheadline)
-                            .foregroundColor(.secondary)
-
-                        HStack {
-                            if containerService.kernelConfig.isRecommended {
-                                Button("Recommended Kernel Active") {
-                                    // No action needed - already active
-                                }
-                                .buttonStyle(.bordered)
-                                .disabled(true)
-
-                                Label("Currently Active", systemImage: "checkmark.circle.fill")
-                                    .foregroundColor(.green)
-                                    .font(.subheadline)
-                            } else {
-                                Button("Use Recommended Kernel") {
-                                    Task {
-                                        await containerService.setRecommendedKernel()
-                                    }
-                                }
-                                .buttonStyle(.borderedProminent)
-                                .disabled(containerService.isKernelLoading)
-                            }
-
-                            Spacer()
-                        }
-                    }
-                    .padding(16)
-                    .background(Color(NSColor.controlBackgroundColor))
-                    .cornerRadius(8)
-
-                    // Custom Kernel Section
-                    VStack(alignment: .leading, spacing: 12) {
-                        Text("Custom Kernel")
-                            .font(.headline)
-                            .foregroundColor(.primary)
-
-                        Text("Configure a custom kernel using a binary path, tar archive, or remote URL.")
-                            .font(.subheadline)
-                            .foregroundColor(.secondary)
-
-                        Button("Configure Custom Kernel") {
-                            showCustomKernelDialog()
-                        }
-                        .buttonStyle(.bordered)
-                        .disabled(containerService.isKernelLoading)
-
-                        if !containerService.kernelConfig.isRecommended &&
-                           (containerService.kernelConfig.binary != nil || containerService.kernelConfig.tar != nil) {
-                            VStack(alignment: .leading, spacing: 4) {
-                                Text("Current Custom Configuration:")
-                                    .font(.subheadline)
-                                    .fontWeight(.medium)
-
-                                if let binary = containerService.kernelConfig.binary {
-                                    Text("Binary: \(binary)")
-                                        .font(.caption)
-                                        .foregroundColor(.secondary)
-                                }
-
-                                if let tar = containerService.kernelConfig.tar {
-                                    Text("Archive: \(tar)")
-                                        .font(.caption)
-                                        .foregroundColor(.secondary)
-                                }
-
-                                Text("Architecture: \(containerService.kernelConfig.arch.displayName)")
-                                    .font(.caption)
-                                    .foregroundColor(.secondary)
-                            }
-                            .padding(.top, 8)
-                        }
-                    }
-                    .padding(16)
-                    .background(Color(NSColor.controlBackgroundColor))
-                    .cornerRadius(8)
-
-                    Spacer()
+                        .foregroundColor(.green)
                 }
             }
+            .padding(20)
+            .background(Color(NSColor.controlBackgroundColor))
+            .cornerRadius(8)
 
             Spacer()
         }
@@ -555,33 +415,6 @@ struct SettingsView: View {
 
     private var registryView: some View {
         VStack(spacing: 20) {
-            VStack(alignment: .leading, spacing: 8) {
-                HStack {
-                    SwiftUI.Image(systemName: "server.rack")
-                        .font(.title2)
-                        .foregroundColor(.blue)
-                    Text("Container Registries")
-                        .font(.title2)
-                        .fontWeight(.semibold)
-
-                    Spacer()
-
-                    Button(action: {
-                        showRegistryLoginDialog()
-                    }) {
-                        Label("Add Registry", systemImage: "plus")
-                    }
-                    .buttonStyle(.borderedProminent)
-                }
-
-                Text("Manage container registry logins and default registry")
-                    .font(.subheadline)
-                    .foregroundColor(.secondary)
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
-
-            Divider()
-
             if containerService.isRegistriesLoading {
                 VStack {
                     ProgressView()
@@ -623,7 +456,12 @@ struct SettingsView: View {
                 }
             }
 
-            Spacer()
+            Button(action: {
+                showRegistryLoginDialog()
+            }) {
+                Label("Add Registry", systemImage: "plus")
+            }
+            .buttonStyle(.borderedProminent)
         }
         .padding(20)
     }
