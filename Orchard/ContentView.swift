@@ -15,9 +15,16 @@ struct ContentView: View {
     @State private var selectedImage: String?
     @State private var selectedMount: String?
 
+    // Remember last selections for each tab
+    @State private var lastSelectedContainer: String?
+    @State private var lastSelectedImage: String?
+    @State private var lastSelectedMount: String?
+
     @State private var searchText: String = ""
     @State private var showOnlyRunning: Bool = false
     @State private var refreshTimer: Timer?
+
+    @FocusState private var listFocusedTab: TabSelection?
 
     // Computed property for current resource title
     private var currentResourceTitle: String {
@@ -228,10 +235,14 @@ struct ContentView: View {
 
                 } else if let mount = currentMount {
 
-                    Button("Open in Finder") {
+                    Button(action: {
                         NSWorkspace.shared.open(URL(fileURLWithPath: mount.mount.source))
+                    }) {
+                        SwiftUI.Image(systemName: "folder")
+                            .font(.system(size: 14, weight: .medium))
                     }
                     .buttonStyle(.borderless)
+                    .help("Open in Finder")
                 }
 
             }
@@ -295,20 +306,34 @@ struct ContentView: View {
         Button(action: {
             selectedTab = tab
 
-            // Auto-select first element when changing tabs
+            // Restore previous selection or select first element when changing tabs
             switch tab {
             case .containers:
-                if !filteredContainers.isEmpty {
+                if let lastSelected = lastSelectedContainer,
+                   filteredContainers.contains(where: { $0.configuration.id == lastSelected }) {
+                    selectedContainer = lastSelected
+                } else if !filteredContainers.isEmpty {
                     selectedContainer = filteredContainers.first?.configuration.id
                 }
             case .images:
-                if !filteredImages.isEmpty {
+                if let lastSelected = lastSelectedImage,
+                   filteredImages.contains(where: { $0.reference == lastSelected }) {
+                    selectedImage = lastSelected
+                } else if !filteredImages.isEmpty {
                     selectedImage = filteredImages.first?.reference
                 }
             case .mounts:
-                if !filteredMounts.isEmpty {
+                if let lastSelected = lastSelectedMount,
+                   filteredMounts.contains(where: { $0.id == lastSelected }) {
+                    selectedMount = lastSelected
+                } else if !filteredMounts.isEmpty {
                     selectedMount = filteredMounts.first?.id
                 }
+            }
+
+            // Set focus to the current tab's list
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
+                listFocusedTab = tab
             }
         }) {
             HStack(spacing: 6) {
@@ -395,6 +420,17 @@ struct ContentView: View {
             }
             .listStyle(PlainListStyle())
             .animation(.easeInOut(duration: 0.3), value: containerService.containers)
+            .focused($listFocusedTab, equals: .containers)
+            .onChange(of: selectedContainer) { _, newValue in
+                lastSelectedContainer = newValue
+            }
+            .onChange(of: selectedTab) { _, newTab in
+                if newTab == .containers {
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                        listFocusedTab = .containers
+                    }
+                }
+            }
 
             Rectangle()
                 .fill(Color(NSColor.separatorColor))
@@ -457,6 +493,17 @@ struct ContentView: View {
             }
             .listStyle(PlainListStyle())
             .animation(.easeInOut(duration: 0.3), value: containerService.images)
+            .focused($listFocusedTab, equals: .images)
+            .onChange(of: selectedImage) { _, newValue in
+                lastSelectedImage = newValue
+            }
+            .onChange(of: selectedTab) { _, newTab in
+                if newTab == .images {
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                        listFocusedTab = .images
+                    }
+                }
+            }
 
 
 
@@ -545,6 +592,17 @@ struct ContentView: View {
             }
             .listStyle(PlainListStyle())
             .animation(.easeInOut(duration: 0.3), value: containerService.allMounts)
+            .focused($listFocusedTab, equals: .mounts)
+            .onChange(of: selectedMount) { _, newValue in
+                lastSelectedMount = newValue
+            }
+            .onChange(of: selectedTab) { _, newTab in
+                if newTab == .mounts {
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                        listFocusedTab = .mounts
+                    }
+                }
+            }
 
             Rectangle()
                 .fill(Color(NSColor.separatorColor))
