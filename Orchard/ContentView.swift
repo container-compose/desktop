@@ -25,6 +25,8 @@ struct ContentView: View {
     @State private var refreshTimer: Timer?
 
     @FocusState private var listFocusedTab: TabSelection?
+    @State private var showingTabSwitcherPopover = false
+    @State private var showingItemNavigatorPopover = false
 
     // Computed property for current resource title
     private var currentResourceTitle: String {
@@ -187,22 +189,31 @@ struct ContentView: View {
             ToolbarItemGroup(placement: .navigation) {
                 // Xcode-style breadcrumb navigation
                 HStack(spacing: 4) {
-                    // Current tab
+                    // Tab switcher
                     Button(selectedTab.title) {
-                        // Could show tab picker if needed
+                        showingTabSwitcherPopover = true
                     }
                     .buttonStyle(.plain)
                     .foregroundColor(.secondary)
+                    .popover(isPresented: $showingTabSwitcherPopover) {
+                        tabSwitcherPopoverView
+                    }
 
                     if !currentResourceTitle.isEmpty {
                         SwiftUI.Image(systemName: "chevron.right")
                             .font(.caption)
                             .foregroundColor(.secondary)
 
-                        // Current resource
-                        Text(currentResourceTitle)
-                            .fontWeight(.medium)
-                            .foregroundColor(.primary)
+                        // Current resource with item navigator
+                        Button(currentResourceTitle) {
+                            showingItemNavigatorPopover = true
+                        }
+                        .buttonStyle(.plain)
+                        .fontWeight(.medium)
+                        .foregroundColor(.primary)
+                        .popover(isPresented: $showingItemNavigatorPopover) {
+                            itemNavigatorPopoverView
+                        }
                     }
                 }
 
@@ -352,7 +363,271 @@ struct ContentView: View {
         .buttonStyle(.plain)
     }
 
+    private var tabSwitcherPopoverView: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            tabSwitcherHeader
+            Divider()
+            tabSwitcherOptions
+        }
+        .frame(width: 200)
+        .background(Color(NSColor.controlBackgroundColor))
+    }
 
+    private var tabSwitcherHeader: some View {
+        HStack {
+            Text("Switch Tab")
+                .font(.headline)
+                .fontWeight(.medium)
+            Spacer()
+        }
+        .padding()
+        .background(Color(NSColor.controlBackgroundColor))
+    }
+
+    private var tabSwitcherOptions: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            ForEach(TabSelection.allCases, id: \.self) { tab in
+                tabSwitcherRow(tab)
+                if tab != TabSelection.allCases.last {
+                    Divider().padding(.leading)
+                }
+            }
+        }
+    }
+
+    private func tabSwitcherRow(_ tab: TabSelection) -> some View {
+        Button(action: {
+            selectedTab = tab
+            showingTabSwitcherPopover = false
+
+            // Auto-select first item in new tab
+            switch tab {
+            case .containers:
+                if !filteredContainers.isEmpty {
+                    selectedContainer = filteredContainers.first?.configuration.id
+                    lastSelectedContainer = selectedContainer
+                }
+            case .images:
+                if !filteredImages.isEmpty {
+                    selectedImage = filteredImages.first?.reference
+                    lastSelectedImage = selectedImage
+                }
+            case .mounts:
+                if !filteredMounts.isEmpty {
+                    selectedMount = filteredMounts.first?.id
+                    lastSelectedMount = selectedMount
+                }
+            }
+
+            // Set focus
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
+                listFocusedTab = tab
+            }
+        }) {
+            HStack {
+                SwiftUI.Image(systemName: tab.icon)
+                    .font(.subheadline)
+                    .foregroundColor(.secondary)
+
+                Text(tab.title)
+                    .font(.subheadline)
+                    .fontWeight(.medium)
+
+                Spacer()
+
+                if selectedTab == tab {
+                    SwiftUI.Image(systemName: "checkmark")
+                        .font(.caption)
+                        .foregroundColor(.accentColor)
+                }
+            }
+            .padding(.horizontal)
+            .padding(.vertical, 8)
+            .background(selectedTab == tab ? Color.accentColor.opacity(0.1) : Color.clear)
+        }
+        .buttonStyle(.plain)
+        .contentShape(Rectangle())
+    }
+
+    private var itemNavigatorPopoverView: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            popoverHeader
+            Divider()
+            popoverContent
+        }
+        .frame(width: 300)
+        .background(Color(NSColor.controlBackgroundColor))
+    }
+
+    private var popoverHeader: some View {
+        HStack {
+            SwiftUI.Image(systemName: selectedTab.icon)
+                .font(.headline)
+            Text(selectedTab.title)
+                .font(.headline)
+                .fontWeight(.medium)
+            Spacer()
+        }
+        .padding()
+        .background(Color(NSColor.controlBackgroundColor))
+    }
+
+    private var popoverContent: some View {
+        ScrollView {
+            LazyVStack(alignment: .leading, spacing: 0) {
+                switch selectedTab {
+                case .containers:
+                    containerPopoverItems
+                case .images:
+                    imagePopoverItems
+                case .mounts:
+                    mountPopoverItems
+                }
+            }
+        }
+        .frame(maxHeight: 300)
+    }
+
+    private var containerPopoverItems: some View {
+        ForEach(filteredContainers, id: \.configuration.id) { container in
+            containerPopoverRow(container)
+            if container.configuration.id != filteredContainers.last?.configuration.id {
+                Divider().padding(.leading)
+            }
+        }
+    }
+
+    private func containerPopoverRow(_ container: Container) -> some View {
+        Button(action: {
+            selectedContainer = container.configuration.id
+            lastSelectedContainer = container.configuration.id
+            showingItemNavigatorPopover = false
+        }) {
+            HStack {
+                Circle()
+                    .fill(container.status.lowercased() == "running" ? .green : .gray)
+                    .frame(width: 8, height: 8)
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(container.configuration.id)
+                        .font(.subheadline)
+                        .fontWeight(.medium)
+                    Text(container.status.capitalized)
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
+
+                Spacer()
+
+                if selectedContainer == container.configuration.id {
+                    SwiftUI.Image(systemName: "checkmark")
+                        .font(.caption)
+                        .foregroundColor(.accentColor)
+                }
+            }
+            .padding(.horizontal)
+            .padding(.vertical, 8)
+            .background(selectedContainer == container.configuration.id ? Color.accentColor.opacity(0.1) : Color.clear)
+        }
+        .buttonStyle(.plain)
+        .contentShape(Rectangle())
+    }
+
+    private var imagePopoverItems: some View {
+        ForEach(filteredImages, id: \.reference) { image in
+            imagePopoverRow(image)
+            if image.reference != filteredImages.last?.reference {
+                Divider().padding(.leading)
+            }
+        }
+    }
+
+    private func imagePopoverRow(_ image: ContainerImage) -> some View {
+        Button(action: {
+            selectedImage = image.reference
+            lastSelectedImage = image.reference
+            showingItemNavigatorPopover = false
+        }) {
+            HStack {
+                SwiftUI.Image(systemName: "cube.transparent")
+                    .font(.subheadline)
+                    .foregroundColor(.secondary)
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(imageDisplayName(image.reference))
+                        .font(.subheadline)
+                        .fontWeight(.medium)
+                    Text(image.reference)
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                        .lineLimit(1)
+                }
+
+                Spacer()
+
+                if selectedImage == image.reference {
+                    SwiftUI.Image(systemName: "checkmark")
+                        .font(.caption)
+                        .foregroundColor(.accentColor)
+                }
+            }
+            .padding(.horizontal)
+            .padding(.vertical, 8)
+            .background(selectedImage == image.reference ? Color.accentColor.opacity(0.1) : Color.clear)
+        }
+        .buttonStyle(.plain)
+        .contentShape(Rectangle())
+    }
+
+    private var mountPopoverItems: some View {
+        ForEach(filteredMounts, id: \.id) { mount in
+            mountPopoverRow(mount)
+            if mount.id != filteredMounts.last?.id {
+                Divider().padding(.leading)
+            }
+        }
+    }
+
+    private func mountPopoverRow(_ mount: ContainerMount) -> some View {
+        Button(action: {
+            selectedMount = mount.id
+            lastSelectedMount = mount.id
+            showingItemNavigatorPopover = false
+        }) {
+            HStack {
+                SwiftUI.Image(systemName: "externaldrive")
+                    .font(.subheadline)
+                    .foregroundColor(.secondary)
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(URL(fileURLWithPath: mount.mount.source).lastPathComponent)
+                        .font(.subheadline)
+                        .fontWeight(.medium)
+                    Text(mount.mount.source)
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                        .lineLimit(1)
+                }
+
+                Spacer()
+
+                if selectedMount == mount.id {
+                    SwiftUI.Image(systemName: "checkmark")
+                        .font(.caption)
+                        .foregroundColor(.accentColor)
+                }
+            }
+            .padding(.horizontal)
+            .padding(.vertical, 8)
+            .background(selectedMount == mount.id ? Color.accentColor.opacity(0.1) : Color.clear)
+        }
+        .buttonStyle(.plain)
+        .contentShape(Rectangle())
+    }
+
+    private func imageDisplayName(_ reference: String) -> String {
+        reference.split(separator: "/").last?.split(separator: ":").first.map(String.init) ?? reference
+    }
 
     private var selectedContentView: some View {
         Group {
@@ -369,18 +644,31 @@ struct ContentView: View {
     }
 
     private var systemStatusView: some View {
-        HStack(spacing: 8) {
-            SwiftUI.Image(systemName: "server.rack")
-                .foregroundColor(containerService.systemStatus.color)
-                .help("Container System: \(containerService.systemStatus.text)")
+        SwiftUI.Image(systemName: "button.programmable")
+            .foregroundColor(combinedSystemStatusColor)
+            .help(combinedSystemStatusText)
+            .transaction { transaction in
+                transaction.animation = nil
+            }
+    }
 
-            SwiftUI.Image(systemName: "hammer")
-                .foregroundColor(containerService.builderStatus.color)
-                .help("Builder: \(containerService.builderStatus.text)")
+    private var combinedSystemStatusColor: Color {
+        let systemRunning = containerService.systemStatus == .running
+        let builderRunning = containerService.builderStatus == .running
+
+        if systemRunning && builderRunning {
+            return .green
+        } else if systemRunning && !builderRunning {
+            return .orange
+        } else {
+            return .red
         }
-        .transaction { transaction in
-            transaction.animation = nil
-        }
+    }
+
+    private var combinedSystemStatusText: String {
+        let systemText = containerService.systemStatus.text
+        let builderText = containerService.builderStatus.text
+        return "Container System: \(systemText)\nBuilder: \(builderText)"
     }
 
 
