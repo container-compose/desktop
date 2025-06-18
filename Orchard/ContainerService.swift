@@ -35,7 +35,7 @@ class ContainerService: ObservableObject {
     private let lastUpdateCheckKey = "OrchardLastUpdateCheck"
 
     // App version info
-    let currentVersion = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "0.1.3"
+    let currentVersion = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "0.1.4"
     let githubRepo = "container-compose/orchard" // Replace with actual repo
     private let updateCheckInterval: TimeInterval = 1 * 60 * 60 // 1 hour
 
