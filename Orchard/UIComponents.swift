@@ -6,6 +6,7 @@ import SwiftUI
 struct ContainerImageRow: View {
     let image: ContainerImage
     @EnvironmentObject var containerService: ContainerService
+    @State private var copyFeedbackStates: [String: Bool] = [:]
 
     private var imageName: String {
         // Extract the image name from the reference (e.g., "docker.io/library/alpine:3" -> "alpine")
@@ -61,20 +62,37 @@ struct ContainerImageRow: View {
         .padding(8)
         .contextMenu {
             Button {
-                let pasteboard = NSPasteboard.general
-                pasteboard.clearContents()
-                pasteboard.setString(image.reference, forType: .string)
+                copyToClipboard(image.reference, key: "reference")
             } label: {
-                Label("Copy Reference", systemImage: "doc.on.doc")
+                HStack {
+                    SwiftUI.Image(systemName: copyFeedbackStates["reference"] == true ? "checkmark" : "doc.on.doc")
+                        .foregroundColor(copyFeedbackStates["reference"] == true ? .white : .primary)
+                    Text("Copy Reference")
+                }
+                .background(copyFeedbackStates["reference"] == true ? Color.green : Color.clear)
             }
 
             Button {
-                let pasteboard = NSPasteboard.general
-                pasteboard.clearContents()
-                pasteboard.setString(image.descriptor.digest, forType: .string)
+                copyToClipboard(image.descriptor.digest, key: "digest")
             } label: {
-                Label("Copy Digest", systemImage: "number")
+                HStack {
+                    SwiftUI.Image(systemName: copyFeedbackStates["digest"] == true ? "checkmark" : "number")
+                        .foregroundColor(copyFeedbackStates["digest"] == true ? .white : .primary)
+                    Text("Copy Digest")
+                }
+                .background(copyFeedbackStates["digest"] == true ? Color.green : Color.clear)
             }
+        }
+    }
+
+    private func copyToClipboard(_ text: String, key: String) {
+        let pasteboard = NSPasteboard.general
+        pasteboard.clearContents()
+        pasteboard.setString(text, forType: .string)
+
+        copyFeedbackStates[key] = true
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
+            copyFeedbackStates[key] = false
         }
     }
 }
@@ -82,6 +100,7 @@ struct ContainerImageRow: View {
 struct MountRow: View {
     let mount: ContainerMount
     @EnvironmentObject var containerService: ContainerService
+    @State private var copyFeedbackStates: [String: Bool] = [:]
 
     private var displaySource: String {
         // Show just the last component of the path for cleaner display
@@ -126,20 +145,37 @@ struct MountRow: View {
         .padding(8)
         .contextMenu {
             Button {
-                let pasteboard = NSPasteboard.general
-                pasteboard.clearContents()
-                pasteboard.setString(mount.mount.source, forType: .string)
+                copyToClipboard(mount.mount.source, key: "source")
             } label: {
-                Label("Copy Source Path", systemImage: "doc.on.doc")
+                HStack {
+                    SwiftUI.Image(systemName: copyFeedbackStates["source"] == true ? "checkmark" : "doc.on.doc")
+                        .foregroundColor(copyFeedbackStates["source"] == true ? .white : .primary)
+                    Text("Copy Source Path")
+                }
+                .background(copyFeedbackStates["source"] == true ? Color.green : Color.clear)
             }
 
             Button {
-                let pasteboard = NSPasteboard.general
-                pasteboard.clearContents()
-                pasteboard.setString(mount.mount.destination, forType: .string)
+                copyToClipboard(mount.mount.destination, key: "destination")
             } label: {
-                Label("Copy Destination Path", systemImage: "doc.on.doc")
+                HStack {
+                    SwiftUI.Image(systemName: copyFeedbackStates["destination"] == true ? "checkmark" : "doc.on.doc")
+                        .foregroundColor(copyFeedbackStates["destination"] == true ? .white : .primary)
+                    Text("Copy Destination Path")
+                }
+                .background(copyFeedbackStates["destination"] == true ? Color.green : Color.clear)
             }
+        }
+    }
+
+    private func copyToClipboard(_ text: String, key: String) {
+        let pasteboard = NSPasteboard.general
+        pasteboard.clearContents()
+        pasteboard.setString(text, forType: .string)
+
+        copyFeedbackStates[key] = true
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
+            copyFeedbackStates[key] = false
         }
     }
 }
@@ -150,6 +186,7 @@ struct ContainerRow: View {
     let stopContainer: (String) -> Void
     let startContainer: (String) -> Void
     let removeContainer: (String) -> Void
+    @State private var copyFeedbackStates: [String: Bool] = [:]
 
     private var networkAddress: String {
         guard !container.networks.isEmpty else {
@@ -181,11 +218,14 @@ struct ContainerRow: View {
         .contextMenu {
             if !container.networks.isEmpty {
                 Button {
-                    let pasteboard = NSPasteboard.general
-                    pasteboard.clearContents()
-                    pasteboard.setString(networkAddress, forType: .string)
+                    copyToClipboard(networkAddress, key: "networkAddress")
                 } label: {
-                    Label("Copy IP address", systemImage: "network")
+                    HStack {
+                        SwiftUI.Image(systemName: copyFeedbackStates["networkAddress"] == true ? "checkmark" : "network")
+                            .foregroundColor(copyFeedbackStates["networkAddress"] == true ? .white : .primary)
+                        Text("Copy IP address")
+                    }
+                    .background(copyFeedbackStates["networkAddress"] == true ? Color.green : Color.clear)
                 }
             }
 
@@ -205,6 +245,17 @@ struct ContainerRow: View {
                     removeContainer(container.configuration.id)
                 }
             }
+        }
+    }
+
+    private func copyToClipboard(_ text: String, key: String) {
+        let pasteboard = NSPasteboard.general
+        pasteboard.clearContents()
+        pasteboard.setString(text, forType: .string)
+
+        copyFeedbackStates[key] = true
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
+            copyFeedbackStates[key] = false
         }
     }
 }
@@ -393,17 +444,7 @@ struct CopyableInfoRow: View {
                 .monospaced()
                 .textSelection(.enabled)
             Spacer()
-            Button {
-                let pasteboard = NSPasteboard.general
-                pasteboard.clearContents()
-                pasteboard.setString(copyValue ?? value, forType: .string)
-            } label: {
-                SwiftUI.Image(systemName: "doc.on.doc")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-            }
-            .buttonStyle(.plain)
-            .help("Copy to clipboard")
+            CopyButton(text: copyValue ?? value, label: "Copy to clipboard")
         }
     }
 }
@@ -414,26 +455,25 @@ struct NavigableInfoRow: View {
     let onNavigate: () -> Void
 
     var body: some View {
-        HStack {
-            Text(label)
-                .font(.subheadline)
-                .foregroundColor(.secondary)
-                .frame(width: 100, alignment: .leading)
-            Text(value)
-                .font(.subheadline)
-                .monospaced()
-                .textSelection(.enabled)
-            Spacer()
-            Button {
-                onNavigate()
-            } label: {
+        Button(action: onNavigate) {
+            HStack {
+                Text(label)
+                    .font(.subheadline)
+                    .foregroundColor(.secondary)
+                    .frame(width: 100, alignment: .leading)
+                Text(value)
+                    .font(.subheadline)
+                    .monospaced()
+                    .textSelection(.enabled)
+                Spacer()
                 SwiftUI.Image(systemName: "chevron.right")
                     .font(.caption)
                     .foregroundColor(.secondary)
             }
-            .buttonStyle(.plain)
-            .help("View image details")
+            .contentShape(Rectangle())
         }
+        .buttonStyle(.plain)
+        .help("View details")
     }
 }
 

@@ -384,49 +384,50 @@ struct ContainerDetailView: View {
                 VStack(alignment: .leading, spacing: 12) {
                     ForEach(Array(container.configuration.mounts.enumerated()), id: \.offset) {
                         index, mount in
-                        VStack(alignment: .leading, spacing: 8) {
-                            HStack {
-                                Text("Mount \(index + 1)")
-                                    .font(.subheadline)
-                                    .fontWeight(.medium)
+                        Button(action: {
+                            // Navigate to mount details
+                            let mountId = "\(mount.source)->\(mount.destination)"
+                            NotificationCenter.default.post(
+                                name: NSNotification.Name("NavigateToMount"),
+                                object: mountId
+                            )
+                        }) {
+                            VStack(alignment: .leading, spacing: 8) {
+                                HStack {
+                                    Text("Mount \(index + 1)")
+                                        .font(.subheadline)
+                                        .fontWeight(.medium)
 
-                                Spacer()
+                                    Spacer()
 
-                                Button {
-                                    // Navigate to mount details
-                                    let mountId = "\(mount.source)->\(mount.destination)"
-                                    NotificationCenter.default.post(
-                                        name: NSNotification.Name("NavigateToMount"),
-                                        object: mountId
-                                    )
-                                } label: {
                                     SwiftUI.Image(systemName: "chevron.right")
                                         .font(.caption)
                                         .foregroundColor(.secondary)
                                 }
-                                .buttonStyle(.plain)
-                                .help("View mount details")
-                            }
 
-                            InfoRow(label: "Source", value: mount.source)
-                            InfoRow(label: "Destination", value: mount.destination)
+                                InfoRow(label: "Source", value: mount.source)
+                                InfoRow(label: "Destination", value: mount.destination)
 
-                            if mount.type.virtiofs != nil {
-                                InfoRow(label: "Type", value: "VirtioFS")
-                            } else if mount.type.tmpfs != nil {
-                                InfoRow(label: "Type", value: "tmpfs")
-                            } else {
-                                InfoRow(label: "Type", value: "Unknown")
-                            }
+                                if mount.type.virtiofs != nil {
+                                    InfoRow(label: "Type", value: "VirtioFS")
+                                } else if mount.type.tmpfs != nil {
+                                    InfoRow(label: "Type", value: "tmpfs")
+                                } else {
+                                    InfoRow(label: "Type", value: "Unknown")
+                                }
 
-                            if !mount.options.isEmpty {
-                                InfoRow(
-                                    label: "Options", value: mount.options.joined(separator: ", "))
+                                if !mount.options.isEmpty {
+                                    InfoRow(
+                                        label: "Options", value: mount.options.joined(separator: ", "))
+                                }
                             }
+                            .padding(12)
+                            .background(Color(NSColor.controlBackgroundColor).opacity(0.3))
+                            .cornerRadius(8)
+                            .contentShape(Rectangle())
                         }
-                        .padding()
-                        .background(Color(NSColor.controlBackgroundColor).opacity(0.5))
-                        .cornerRadius(8)
+                        .buttonStyle(.plain)
+                        .help("View mount details")
                     }
                 }
             } else {
@@ -670,17 +671,7 @@ struct ContainerImageDetailView: View {
                                 .textSelection(.enabled)
                                 .frame(maxWidth: .infinity, alignment: .leading)
 
-                            Button {
-                                let pasteboard = NSPasteboard.general
-                                pasteboard.clearContents()
-                                pasteboard.setString(value, forType: .string)
-                            } label: {
-                                SwiftUI.Image(systemName: "doc.on.doc")
-                                    .font(.caption)
-                                    .foregroundColor(.secondary)
-                            }
-                            .buttonStyle(.plain)
-                            .help("Copy value")
+                            CopyButton(text: value, label: "Copy value")
                         }
                         .padding(.vertical, 2)
                     }
@@ -707,9 +698,37 @@ struct ContainerImageDetailView: View {
     }
 }
 
+struct CopyButton: View {
+    let text: String
+    let label: String
+    @State private var showingFeedback = false
+
+    var body: some View {
+        Button {
+            let pasteboard = NSPasteboard.general
+            pasteboard.clearContents()
+            pasteboard.setString(text, forType: .string)
+
+            showingFeedback = true
+            DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
+                showingFeedback = false
+            }
+        } label: {
+            SwiftUI.Image(systemName: showingFeedback ? "checkmark" : "doc.on.doc")
+                .font(.caption)
+                .foregroundColor(showingFeedback ? .white : .secondary)
+                .background(showingFeedback ? Color.green : Color.clear)
+                .clipShape(Circle())
+        }
+        .buttonStyle(.plain)
+        .help(label)
+    }
+}
+
 struct ContainerImageUsageRow: View {
     let container: Container
     @Environment(\.openURL) var openURL
+    @State private var copyFeedbackStates: [String: Bool] = [:]
 
     private var networkAddress: String {
         guard !container.networks.isEmpty else {
@@ -761,9 +780,46 @@ struct ContainerImageUsageRow: View {
             .padding(.vertical, 8)
             .background(Color(.controlBackgroundColor))
             .cornerRadius(8)
+            .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
         .help("Click to view container details")
+        .contextMenu {
+            Button {
+                copyToClipboard(container.configuration.id, key: "containerID")
+            } label: {
+                HStack {
+                    SwiftUI.Image(systemName: copyFeedbackStates["containerID"] == true ? "checkmark" : "doc.on.doc")
+                        .foregroundColor(copyFeedbackStates["containerID"] == true ? .white : .primary)
+                    Text("Copy Container ID")
+                }
+                .background(copyFeedbackStates["containerID"] == true ? Color.green : Color.clear)
+            }
+
+            if !container.networks.isEmpty {
+                Button {
+                    copyToClipboard(networkAddress, key: "networkAddress")
+                } label: {
+                    HStack {
+                        SwiftUI.Image(systemName: copyFeedbackStates["networkAddress"] == true ? "checkmark" : "network")
+                            .foregroundColor(copyFeedbackStates["networkAddress"] == true ? .white : .primary)
+                        Text("Copy IP Address")
+                    }
+                    .background(copyFeedbackStates["networkAddress"] == true ? Color.green : Color.clear)
+                }
+            }
+        }
+    }
+
+    private func copyToClipboard(_ text: String, key: String) {
+        let pasteboard = NSPasteboard.general
+        pasteboard.clearContents()
+        pasteboard.setString(text, forType: .string)
+
+        copyFeedbackStates[key] = true
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
+            copyFeedbackStates[key] = false
+        }
     }
 }
 
@@ -947,6 +1003,7 @@ struct MountDetailView: View {
 struct MountContainerUsageRow: View {
     let container: Container
     @Environment(\.openURL) var openURL
+    @State private var copyFeedbackStates: [String: Bool] = [:]
 
     private var networkAddress: String {
         guard !container.networks.isEmpty else {
@@ -956,71 +1013,89 @@ struct MountContainerUsageRow: View {
     }
 
     var body: some View {
-        HStack {
-            Circle()
-                .fill(container.status.lowercased() == "running" ? .green : .gray)
-                .frame(width: 12, height: 12)
+        Button(action: {
+            // Navigate to container details
+            NotificationCenter.default.post(
+                name: NSNotification.Name("NavigateToContainer"),
+                object: container.configuration.id
+            )
+        }) {
+            HStack {
+                Circle()
+                    .fill(container.status.lowercased() == "running" ? .green : .gray)
+                    .frame(width: 12, height: 12)
 
-            VStack(alignment: .leading, spacing: 2) {
-                Text(container.configuration.id)
-                    .font(.subheadline)
-                    .fontWeight(.medium)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(container.configuration.id)
+                        .font(.subheadline)
+                        .fontWeight(.medium)
 
-                HStack {
-                    Text(container.status.capitalized)
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-
-                    if !container.networks.isEmpty {
-                        Text("•")
+                    HStack {
+                        Text(container.status.capitalized)
                             .font(.caption)
                             .foregroundColor(.secondary)
-                        Text(networkAddress)
-                            .font(.caption)
-                            .monospaced()
-                            .foregroundColor(.secondary)
+
+                        if !container.networks.isEmpty {
+                            Text("•")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                            Text(networkAddress)
+                                .font(.caption)
+                                .monospaced()
+                                .foregroundColor(.secondary)
+                        }
                     }
                 }
-            }
 
-            Spacer()
+                Spacer()
 
-            Button {
-                // Navigate to container details
-                NotificationCenter.default.post(
-                    name: NSNotification.Name("NavigateToContainer"),
-                    object: container.configuration.id
-                )
-            } label: {
                 SwiftUI.Image(systemName: "chevron.right")
                     .font(.caption)
                     .foregroundColor(.secondary)
             }
-            .buttonStyle(.plain)
-            .help("View container details")
+            .padding(.horizontal, 12)
+            .padding(.vertical, 8)
+            .background(Color(NSColor.controlBackgroundColor).opacity(0.3))
+            .cornerRadius(8)
+            .contentShape(Rectangle())
         }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 8)
-        .background(Color(NSColor.controlBackgroundColor).opacity(0.3))
-        .cornerRadius(8)
+        .buttonStyle(.plain)
         .contextMenu {
             Button {
-                let pasteboard = NSPasteboard.general
-                pasteboard.clearContents()
-                pasteboard.setString(container.configuration.id, forType: .string)
+                copyToClipboard(container.configuration.id, key: "containerID")
             } label: {
-                Label("Copy Container ID", systemImage: "doc.on.doc")
+                HStack {
+                    SwiftUI.Image(systemName: copyFeedbackStates["containerID"] == true ? "checkmark" : "doc.on.doc")
+                        .foregroundColor(copyFeedbackStates["containerID"] == true ? .white : .primary)
+                    Text("Copy Container ID")
+                }
+                .background(copyFeedbackStates["containerID"] == true ? Color.green : Color.clear)
             }
 
             if !container.networks.isEmpty {
                 Button {
-                    let pasteboard = NSPasteboard.general
-                    pasteboard.clearContents()
-                    pasteboard.setString(networkAddress, forType: .string)
+                    copyToClipboard(networkAddress, key: "networkAddress")
                 } label: {
-                    Label("Copy IP Address", systemImage: "network")
+                    HStack {
+                        SwiftUI.Image(systemName: copyFeedbackStates["networkAddress"] == true ? "checkmark" : "network")
+                            .foregroundColor(copyFeedbackStates["networkAddress"] == true ? .white : .primary)
+                        Text("Copy IP Address")
+                    }
+                    .background(copyFeedbackStates["networkAddress"] == true ? Color.green : Color.clear)
                 }
             }
+        }
+        .help("Click to view container details")
+    }
+
+    private func copyToClipboard(_ text: String, key: String) {
+        let pasteboard = NSPasteboard.general
+        pasteboard.clearContents()
+        pasteboard.setString(text, forType: .string)
+
+        copyFeedbackStates[key] = true
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
+            copyFeedbackStates[key] = false
         }
     }
 }
