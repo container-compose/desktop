@@ -12,6 +12,7 @@ struct ContainerDetailView: View {
         case overview = "Overview"
         case network = "Network"
         case environment = "Environment"
+        case mounts = "Mounts"
         case logs = "Logs"
 
         var systemImage: String {
@@ -22,6 +23,8 @@ struct ContainerDetailView: View {
                 return "network"
             case .environment:
                 return "gearshape"
+            case .mounts:
+                return "externaldrive"
             case .logs:
                 return "doc.text"
             }
@@ -86,6 +89,8 @@ struct ContainerDetailView: View {
                 containerNetworkTab
             case .environment:
                 containerEnvironmentTab
+            case .mounts:
+                containerMountsTab
             case .logs:
                 LogsView(containerId: container.configuration.id)
                     .environmentObject(containerService)
@@ -96,7 +101,6 @@ struct ContainerDetailView: View {
     private var containerOverviewTab: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 20) {
-
                 // Overview and Image side by side
                 HStack(alignment: .top, spacing: 20) {
                     containerOverviewSection(container: container)
@@ -110,11 +114,6 @@ struct ContainerDetailView: View {
                     containerResourcesSection(container: container)
                     containerProcessSection(container: container)
                 }
-
-                Divider()
-
-                // Mounts section
-                containerMountsSection(container: container)
 
                 Spacer(minLength: 20)
             }
@@ -136,6 +135,16 @@ struct ContainerDetailView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 20) {
                 containerEnvironmentSection(container: container)
+                Spacer(minLength: 20)
+            }
+            .padding()
+        }
+    }
+
+    private var containerMountsTab: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 20) {
+                containerMountsSection(container: container)
                 Spacer(minLength: 20)
             }
             .padding()
@@ -278,7 +287,7 @@ struct ContainerDetailView: View {
                         InfoRow(label: "Gateway", value: network.gateway)
                         InfoRow(label: "Network", value: network.network)
                         if network.hostname != container.configuration.hostname {
-                            InfoRow(label: "Network Hostname", value: network.hostname)
+                            InfoRow(label: "Hostname", value: network.hostname)
                         }
                     }
                     .padding()
