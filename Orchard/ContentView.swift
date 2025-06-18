@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import AppKit
 
 struct ContentView: View {
     @EnvironmentObject var containerService: ContainerService
@@ -176,7 +177,7 @@ struct ContentView: View {
         }
         .navigationTitle(currentResourceTitle)
         .toolbar {
-            ToolbarItemGroup(placement: .primaryAction) {
+            ToolbarItemGroup(placement: .navigation) {
                 // Resource-specific controls in title bar
                 if let container = currentContainer {
                     // Container status
@@ -206,8 +207,6 @@ struct ContentView: View {
                     )
                     .padding(.horizontal, 16)
 
-                    Spacer()
-                    
                     HStack(spacing: 8) {
                         if container.status.lowercased() != "running" {
                             ContainerRemoveButton(
@@ -220,28 +219,25 @@ struct ContentView: View {
                                     }
                                 }
                             )
-                            .padding(.trailing, 32)
                         }
                     }
 
                 } else if let image = currentImage {
 
                     // no real actions or conveniences here yet
-                    
+
                 } else if let mount = currentMount {
 
                     Button("Open in Finder") {
-                        let pasteboard = NSPasteboard.general
-                        pasteboard.clearContents()
-                        pasteboard.setString(mount.mount.source, forType: .string)
+                        NSWorkspace.shared.open(URL(fileURLWithPath: mount.mount.source))
                     }
                     .buttonStyle(.borderless)
                 }
 
-                Spacer()
-                
+            }
+
+            ToolbarItemGroup(placement: .primaryAction) {
                 systemStatusView
-                    .padding(.leading, 8)
             }
         }
         .task {
@@ -298,6 +294,22 @@ struct ContentView: View {
     private func tabButton(for tab: TabSelection) -> some View {
         Button(action: {
             selectedTab = tab
+
+            // Auto-select first element when changing tabs
+            switch tab {
+            case .containers:
+                if !filteredContainers.isEmpty {
+                    selectedContainer = filteredContainers.first?.configuration.id
+                }
+            case .images:
+                if !filteredImages.isEmpty {
+                    selectedImage = filteredImages.first?.reference
+                }
+            case .mounts:
+                if !filteredMounts.isEmpty {
+                    selectedMount = filteredMounts.first?.id
+                }
+            }
         }) {
             HStack(spacing: 6) {
                 SwiftUI.Image(systemName: tab.icon)
@@ -330,14 +342,12 @@ struct ContentView: View {
 
     private var systemStatusView: some View {
         HStack(spacing: 8) {
-            Circle()
-                .fill(containerService.systemStatus.color)
-                .frame(width: 10, height: 10)
+            SwiftUI.Image(systemName: "server.rack")
+                .foregroundColor(containerService.systemStatus.color)
                 .help("Container System: \(containerService.systemStatus.text)")
 
-            Circle()
-                .fill(containerService.builderStatus.color)
-                .frame(width: 10, height: 10)
+            SwiftUI.Image(systemName: "hammer")
+                .foregroundColor(containerService.builderStatus.color)
                 .help("Builder: \(containerService.builderStatus.text)")
         }
         .transaction { transaction in
