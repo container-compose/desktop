@@ -268,6 +268,10 @@ class ContainerService: ObservableObject {
             await MainActor.run {
                 if !result.failed {
                     print("Container \(id) stop command sent successfully")
+                    // Immediately refresh builder status in case this container was the builder
+                    Task {
+                        await loadBuilders()
+                    }
                     // Keep loading state and refresh containers to check status
                     Task {
                         await refreshUntilContainerStopped(id)
@@ -424,6 +428,10 @@ class ContainerService: ObservableObject {
         await MainActor.run {
             if !result.failed {
                 print("Container \(id) start command sent successfully")
+                // Immediately refresh builder status in case this container is the builder
+                Task {
+                    await loadBuilders()
+                }
                 // Keep loading state and refresh containers to check status
                 Task {
                     await refreshUntilContainerStarted(id)
@@ -639,6 +647,10 @@ class ContainerService: ObservableObject {
             await MainActor.run {
                 if !result.failed {
                     print("Container \(id) remove command sent successfully")
+                    // Immediately refresh builder status in case this container was the builder
+                    Task {
+                        await loadBuilders()
+                    }
                     // Remove from local array immediately
                     self.containers.removeAll { $0.configuration.id == id }
                     loadingContainers.remove(id)
