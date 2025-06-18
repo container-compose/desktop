@@ -27,6 +27,7 @@ struct ContentView: View {
 
     @State private var searchText: String = ""
     @State private var showOnlyRunning: Bool = false
+    @State private var showOnlyImagesInUse: Bool = false
     @State private var refreshTimer: Timer?
 
     @FocusState private var listFocusedTab: TabSelection?
@@ -811,7 +812,13 @@ struct ContentView: View {
                 }
 
             // Filter controls at bottom
-            VStack(spacing: 12) {
+            VStack(alignment: .leading) {
+                Toggle("Only show images in use", isOn: $showOnlyImagesInUse)
+                    .toggleStyle(CheckboxToggleStyle())
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                    .padding(.bottom, 8)
+
                 // Search field
                 HStack {
                     SwiftUI.Image(systemName: "magnifyingglass")
@@ -834,6 +841,15 @@ struct ContentView: View {
 
     private var filteredImages: [ContainerImage] {
         var filtered = containerService.images
+
+        // Apply "in use" filter
+        if showOnlyImagesInUse {
+            filtered = filtered.filter { image in
+                containerService.containers.contains { container in
+                    container.configuration.image.reference == image.reference
+                }
+            }
+        }
 
         // Apply search filter
         if !searchText.isEmpty {
