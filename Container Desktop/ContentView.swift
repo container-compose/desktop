@@ -15,14 +15,10 @@ struct ContentView: View {
     @State private var selectedMount: String?
 
     @State private var searchText: String = ""
-    @State private var filterSelection: ContainerFilter = .all
+    @State private var showOnlyRunning: Bool = false
     @State private var refreshTimer: Timer?
 
-    enum ContainerFilter: String, CaseIterable {
-        case all = "All"
-        case running = "Running"
-        case stopped = "Stopped"
-    }
+
 
     enum TabSelection: String, CaseIterable {
         case containers = "containers"
@@ -34,7 +30,7 @@ struct ContentView: View {
             case .containers:
                 return "cube.box"
             case .images:
-                return "square.3.layers.3d"
+                return "cube.transparent"
             case .mounts:
                 return "externaldrive"
             }
@@ -277,6 +273,7 @@ struct ContentView: View {
                             }
                         }
                     )
+                    .tag(container.configuration.id)
                 }
             }
             .listStyle(PlainListStyle())
@@ -289,14 +286,13 @@ struct ContentView: View {
                     transaction.animation = nil
                 }
 
-            VStack(spacing: 12) {
+            VStack(alignment: .leading) {
 
-                Picker("", selection: $filterSelection) {
-                    ForEach(ContainerFilter.allCases, id: \.self) { filter in
-                        Text(filter.rawValue).tag(filter)
-                    }
-                }
-                .pickerStyle(SegmentedPickerStyle())
+                Toggle("Only show running containers", isOn: $showOnlyRunning)
+                    .toggleStyle(CheckboxToggleStyle())
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                    .padding(.bottom, 8)
 
                 HStack {
                     SwiftUI.Image(systemName: "magnifyingglass")
@@ -317,14 +313,9 @@ struct ContentView: View {
     private var filteredContainers: [Container] {
         var filtered = containerService.containers
 
-        // Apply status filter
-        switch filterSelection {
-        case .all:
-            break
-        case .running:
+        // Apply running filter
+        if showOnlyRunning {
             filtered = filtered.filter { $0.status.lowercased() == "running" }
-        case .stopped:
-            filtered = filtered.filter { $0.status.lowercased() != "running" }
         }
 
         // Apply search filter
@@ -356,6 +347,7 @@ struct ContentView: View {
             List(selection: $selectedImage) {
                 ForEach(filteredImages, id: \.reference) { image in
                     ContainerImageRow(image: image)
+                        .tag(image.reference)
                 }
             }
             .listStyle(PlainListStyle())
