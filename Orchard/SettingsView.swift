@@ -12,10 +12,13 @@ struct SettingsView: View {
     @State private var selectedTab: SettingsTab = .dns
     @State private var showingErrorAlert = false
     @State private var errorMessage = ""
+    @State private var showingSuccessAlert = false
+    @State private var successMessage = ""
 
     enum SettingsTab: String, CaseIterable {
         case registries = "registries"
         case dns = "dns"
+        case kernel = "kernel"
         case builder = "builder"
 
         var title: String {
@@ -24,6 +27,8 @@ struct SettingsView: View {
                 return "Registries"
             case .dns:
                 return "DNS"
+            case .kernel:
+                return "Kernel"
             case .builder:
                 return "Builder"
             }
@@ -32,9 +37,11 @@ struct SettingsView: View {
         var icon: String {
             switch self {
             case .registries:
-                return "server.rack"
+                return "tray.fill"
             case .dns:
                 return "network"
+            case .kernel:
+                return "cpu"
             case .builder:
                 return "hammer"
             }
@@ -55,6 +62,12 @@ struct SettingsView: View {
                 }
                 .tag(SettingsTab.dns)
 
+            kernelView
+                .tabItem {
+                    Label("Kernel", systemImage: "cpu")
+                }
+                .tag(SettingsTab.kernel)
+
             builderView
                 .tabItem {
                     Label("Builder", systemImage: "hammer")
@@ -64,15 +77,18 @@ struct SettingsView: View {
         .frame(width: 600, height: 500)
         .task {
             await containerService.loadDNSDomains()
+            await containerService.loadKernelConfig()
         }
         .onAppear {
             Task {
                 await containerService.loadDNSDomains()
+                await containerService.loadKernelConfig()
             }
         }
         .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in
             Task {
                 await containerService.loadDNSDomains()
+                await containerService.loadKernelConfig()
             }
         }
         .alert("Error", isPresented: $showingErrorAlert) {
@@ -80,11 +96,23 @@ struct SettingsView: View {
         } message: {
             Text(errorMessage)
         }
+        .alert("Success", isPresented: $showingSuccessAlert) {
+            Button("OK", role: .cancel) { }
+        } message: {
+            Text(successMessage)
+        }
         .onChange(of: containerService.errorMessage) { _, newValue in
             if let error = newValue {
                 errorMessage = error
                 showingErrorAlert = true
                 containerService.errorMessage = nil
+            }
+        }
+        .onChange(of: containerService.successMessage) { _, newValue in
+            if let success = newValue {
+                successMessage = success
+                showingSuccessAlert = true
+                containerService.successMessage = nil
             }
         }
     }
@@ -291,6 +319,132 @@ struct SettingsView: View {
         )
     }
 
+    // MARK: - Kernel View
+
+    private var kernelView: some View {
+        VStack(spacing: 20) {
+            VStack(alignment: .leading, spacing: 8) {
+                HStack {
+                    SwiftUI.Image(systemName: "cpu")
+                        .font(.title2)
+                        .foregroundColor(.purple)
+                    Text("Kernel Configuration")
+                        .font(.title2)
+                        .fontWeight(.semibold)
+                }
+
+                Text("Manage the default kernel configuration for containers")
+                    .font(.subheadline)
+                    .foregroundColor(.secondary)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+
+            Divider()
+
+            if containerService.isKernelLoading {
+                VStack {
+                    ProgressView()
+                        .scaleEffect(0.8)
+                    Text("Configuring kernel...")
+                        .font(.subheadline)
+                        .foregroundColor(.secondary)
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+            } else {
+                VStack(spacing: 24) {
+                    // Recommended Kernel Section
+                    VStack(alignment: .leading, spacing: 12) {
+                        Text("Recommended Kernel")
+                            .font(.headline)
+                            .foregroundColor(.primary)
+
+                        Text("Use the recommended kernel configuration. This is the easiest option and works for most use cases.")
+                            .font(.subheadline)
+                            .foregroundColor(.secondary)
+
+                        HStack {
+                            if containerService.kernelConfig.isRecommended {
+                                Button("Recommended Kernel Active") {
+                                    // No action needed - already active
+                                }
+                                .buttonStyle(.bordered)
+                                .disabled(true)
+
+                                Label("Currently Active", systemImage: "checkmark.circle.fill")
+                                    .foregroundColor(.green)
+                                    .font(.subheadline)
+                            } else {
+                                Button("Use Recommended Kernel") {
+                                    Task {
+                                        await containerService.setRecommendedKernel()
+                                    }
+                                }
+                                .buttonStyle(.borderedProminent)
+                                .disabled(containerService.isKernelLoading)
+                            }
+
+                            Spacer()
+                        }
+                    }
+                    .padding(16)
+                    .background(Color(NSColor.controlBackgroundColor))
+                    .cornerRadius(8)
+
+                    // Custom Kernel Section
+                    VStack(alignment: .leading, spacing: 12) {
+                        Text("Custom Kernel")
+                            .font(.headline)
+                            .foregroundColor(.primary)
+
+                        Text("Configure a custom kernel using a binary path, tar archive, or remote URL.")
+                            .font(.subheadline)
+                            .foregroundColor(.secondary)
+
+                        Button("Configure Custom Kernel") {
+                            showCustomKernelDialog()
+                        }
+                        .buttonStyle(.bordered)
+                        .disabled(containerService.isKernelLoading)
+
+                        if !containerService.kernelConfig.isRecommended &&
+                           (containerService.kernelConfig.binary != nil || containerService.kernelConfig.tar != nil) {
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text("Current Custom Configuration:")
+                                    .font(.subheadline)
+                                    .fontWeight(.medium)
+
+                                if let binary = containerService.kernelConfig.binary {
+                                    Text("Binary: \(binary)")
+                                        .font(.caption)
+                                        .foregroundColor(.secondary)
+                                }
+
+                                if let tar = containerService.kernelConfig.tar {
+                                    Text("Archive: \(tar)")
+                                        .font(.caption)
+                                        .foregroundColor(.secondary)
+                                }
+
+                                Text("Architecture: \(containerService.kernelConfig.arch.displayName)")
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
+                            }
+                            .padding(.top, 8)
+                        }
+                    }
+                    .padding(16)
+                    .background(Color(NSColor.controlBackgroundColor))
+                    .cornerRadius(8)
+
+                    Spacer()
+                }
+            }
+
+            Spacer()
+        }
+        .padding(20)
+    }
+
     // MARK: - Builder View
 
     private var builderView: some View {
@@ -397,6 +551,69 @@ struct SettingsView: View {
         let domainRegex = "^[a-zA-Z0-9]([a-zA-Z0-9\\-]{0,61}[a-zA-Z0-9])?\\.[a-zA-Z]{2,}$"
         let predicate = NSPredicate(format: "SELF MATCHES %@", domainRegex)
         return predicate.evaluate(with: domain)
+    }
+
+    private func showCustomKernelDialog() {
+        let alert = NSAlert()
+        alert.messageText = "Custom Kernel Configuration"
+        alert.informativeText = "Configure a custom kernel. You can specify either a binary path, a tar archive (local path or URL), or both. This operation requires administrator privileges."
+        alert.alertStyle = .informational
+
+        // Create a custom view for the dialog
+        let containerView = NSView(frame: NSRect(x: 0, y: 0, width: 400, height: 120))
+
+        // Binary path field
+        let binaryLabel = NSTextField(labelWithString: "Binary Path (optional):")
+        binaryLabel.frame = NSRect(x: 0, y: 90, width: 150, height: 20)
+        let binaryField = NSTextField(frame: NSRect(x: 0, y: 70, width: 400, height: 24))
+        binaryField.placeholderString = "/path/to/kernel/binary"
+
+        // Tar path field
+        let tarLabel = NSTextField(labelWithString: "Tar Archive (optional):")
+        tarLabel.frame = NSRect(x: 0, y: 45, width: 150, height: 20)
+        let tarField = NSTextField(frame: NSRect(x: 0, y: 25, width: 400, height: 24))
+        tarField.placeholderString = "/path/to/archive.tar or https://example.com/kernel.tar"
+
+        // Architecture popup
+        let archLabel = NSTextField(labelWithString: "Architecture:")
+        archLabel.frame = NSRect(x: 0, y: 0, width: 100, height: 20)
+        let archPopup = NSPopUpButton(frame: NSRect(x: 100, y: -3, width: 200, height: 26))
+        archPopup.addItems(withTitles: KernelArch.allCases.map { $0.displayName })
+        archPopup.selectItem(at: KernelArch.allCases.firstIndex(of: .arm64) ?? 0)
+
+        containerView.addSubview(binaryLabel)
+        containerView.addSubview(binaryField)
+        containerView.addSubview(tarLabel)
+        containerView.addSubview(tarField)
+        containerView.addSubview(archLabel)
+        containerView.addSubview(archPopup)
+
+        alert.accessoryView = containerView
+        alert.addButton(withTitle: "Set Kernel")
+        alert.addButton(withTitle: "Cancel")
+
+        let response = alert.runModal()
+
+        if response == .alertFirstButtonReturn {
+            let binary = binaryField.stringValue.trimmingCharacters(in: .whitespaces)
+            let tar = tarField.stringValue.trimmingCharacters(in: .whitespaces)
+            let archIndex = archPopup.indexOfSelectedItem
+            let arch = KernelArch.allCases[archIndex]
+
+            if binary.isEmpty && tar.isEmpty {
+                errorMessage = "Please specify either a binary path or tar archive."
+                showingErrorAlert = true
+                return
+            }
+
+            Task {
+                await containerService.setCustomKernel(
+                    binary: binary.isEmpty ? nil : binary,
+                    tar: tar.isEmpty ? nil : tar,
+                    arch: arch
+                )
+            }
+        }
     }
 }
 
