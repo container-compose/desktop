@@ -32,10 +32,14 @@ jobs:
           echo "version=$VERSION" >> $GITHUB_OUTPUT
           echo "Version: $VERSION"
 
-      - name: Update version in Info.plist
+      - name: Update version in Info.plist and project file
         run: |
+          # Update Info.plist
           /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString ${{ steps.version.outputs.version }}" Orchard/Info.plist || true
           /usr/libexec/PlistBuddy -c "Set :CFBundleVersion ${{ github.run_number }}" Orchard/Info.plist || true
+
+          # Update MARKETING_VERSION in project file
+          sed -i '' "s/MARKETING_VERSION = [^;]*/MARKETING_VERSION = ${{ steps.version.outputs.version }}/g" Orchard.xcodeproj/project.pbxproj
 
       - name: Build app
         run: |
