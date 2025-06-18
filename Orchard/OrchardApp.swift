@@ -156,8 +156,10 @@ struct MenuBarView: View {
         .frame(width: 200)
         .task {
             await containerService.checkSystemStatus()
-            await containerService.loadContainers()
+            await containerService.loadContainers(showLoading: true)
             await containerService.loadBuilders()
+            await containerService.loadRegistries(showLoading: true)
+            await containerService.loadDNSDomains(showLoading: true)
 
             startRefreshTimer()
         }
@@ -173,10 +175,10 @@ struct MenuBarView: View {
         refreshTimer = Timer.scheduledTimer(withTimeInterval: containerService.refreshInterval.timeInterval, repeats: true) { _ in
             Task { @MainActor in
                 await containerService.checkSystemStatus()
-                await containerService.loadContainers()
+                await containerService.loadContainers(showLoading: false)
                 await containerService.loadBuilders()
-                await containerService.loadRegistries()
-                await containerService.loadDNSDomains()
+                await containerService.loadRegistries(showLoading: false)
+                await containerService.loadDNSDomains(showLoading: false)
             }
         }
     }
