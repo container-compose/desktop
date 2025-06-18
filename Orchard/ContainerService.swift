@@ -17,6 +17,9 @@ class ContainerService: ObservableObject {
     @Published var builderStatus: BuilderStatus = .stopped
     @Published var dnsDomains: [DNSDomain] = []
     @Published var isDNSLoading = false
+    @Published var kernelConfig: KernelConfig = KernelConfig()
+    @Published var isKernelLoading = false
+    @Published var successMessage: String?
 
     // Computed property to get all unique mounts from containers
     var allMounts: [ContainerMount] {
@@ -834,6 +837,144 @@ class ContainerService: ObservableObject {
             await MainActor.run {
                 self.errorMessage = "Failed to unset default DNS domain: \(error.localizedDescription)"
                 self.isDNSLoading = false
+            }
+        }
+    }
+
+    // MARK: - Kernel Management
+
+    func loadKernelConfig() async {
+        await MainActor.run {
+            isKernelLoading = true
+        }
+
+        do {
+            let kernelsDir = NSHomeDirectory() + "/Library/Application Support/com.apple.container/kernels/"
+            let fileManager = FileManager.default
+
+            // Check for both architectures
+            let arm64KernelPath = kernelsDir + "default.kernel-arm64"
+            let amd64KernelPath = kernelsDir + "default.kernel-amd64"
+
+            var kernelPath: String?
+            var arch: KernelArch = .arm64
+
+            if fileManager.fileExists(atPath: arm64KernelPath) {
+                kernelPath = arm64KernelPath
+                arch = .arm64
+            } else if fileManager.fileExists(atPath: amd64KernelPath) {
+                kernelPath = amd64KernelPath
+                arch = .amd64
+            }
+
+            if let kernelPath = kernelPath {
+                // Try to resolve the symlink to see what kernel is active
+                let resolvedPath = try fileManager.destinationOfSymbolicLink(atPath: kernelPath)
+
+                // Check if it's the recommended kernel (contains vmlinux pattern)
+                if resolvedPath.contains("vmlinux-") {
+                    await MainActor.run {
+                        self.kernelConfig = KernelConfig(arch: arch, isRecommended: true)
+                        self.isKernelLoading = false
+                    }
+                } else {
+                    await MainActor.run {
+                        self.kernelConfig = KernelConfig(binary: resolvedPath, arch: arch)
+                        self.isKernelLoading = false
+                    }
+                }
+            } else {
+                await MainActor.run {
+                    self.kernelConfig = KernelConfig()
+                    self.isKernelLoading = false
+                }
+            }
+        } catch {
+            await MainActor.run {
+                self.kernelConfig = KernelConfig()
+                self.isKernelLoading = false
+            }
+        }
+    }
+
+    func setRecommendedKernel() async {
+        await MainActor.run {
+            isKernelLoading = true
+        }
+
+        do {
+            let result = try exec(
+                program: "/usr/local/bin/container",
+                arguments: ["system", "kernel", "set", "--recommended"])
+
+            if !result.failed {
+                await MainActor.run {
+                    self.kernelConfig = KernelConfig(isRecommended: true)
+                    self.successMessage = "Recommended kernel has been installed and configured successfully."
+                    self.isKernelLoading = false
+                }
+            } else {
+                // Check if the error is due to kernel already being installed
+                let errorOutput = result.stderr ?? ""
+                if errorOutput.contains("item with the same name already exists") ||
+                   errorOutput.contains("File exists") {
+                    // Treat this as success - kernel is already installed
+                    await MainActor.run {
+                        self.kernelConfig = KernelConfig(isRecommended: true)
+                        self.successMessage = "The recommended kernel is already installed and active."
+                        self.isKernelLoading = false
+                    }
+                } else {
+                    await MainActor.run {
+                        self.errorMessage = result.stderr ?? "Failed to set recommended kernel"
+                        self.isKernelLoading = false
+                    }
+                }
+            }
+        } catch {
+            await MainActor.run {
+                self.errorMessage = "Failed to set recommended kernel: \(error.localizedDescription)"
+                self.isKernelLoading = false
+            }
+        }
+    }
+
+    func setCustomKernel(binary: String?, tar: String?, arch: KernelArch) async {
+        await MainActor.run {
+            isKernelLoading = true
+        }
+
+        do {
+            var arguments = ["system", "kernel", "set", "--arch", arch.rawValue]
+
+            if let binary = binary, !binary.isEmpty {
+                arguments.append(contentsOf: ["--binary", binary])
+            }
+
+            if let tar = tar, !tar.isEmpty {
+                arguments.append(contentsOf: ["--tar", tar])
+            }
+
+            let result = try exec(
+                program: "/usr/local/bin/container",
+                arguments: arguments)
+
+            if !result.failed {
+                await MainActor.run {
+                    self.kernelConfig = KernelConfig(binary: binary, tar: tar, arch: arch, isRecommended: false)
+                    self.successMessage = "Custom kernel has been configured successfully."
+                    self.isKernelLoading = false
+                }
+            } else {
+                await MainActor.run {
+                    self.errorMessage = result.stderr ?? "Failed to set custom kernel"
+                    self.isKernelLoading = false
+                }
+            }
+        } catch {
+            await MainActor.run {
+                self.errorMessage = "Failed to set custom kernel: \(error.localizedDescription)"
+                self.isKernelLoading = false
             }
         }
     }

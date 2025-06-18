@@ -255,6 +255,36 @@ struct DNSDomain: Codable, Equatable, Identifiable {
     }
 }
 
+// MARK: - Kernel Models
+
+struct KernelConfig: Codable, Equatable {
+    let binary: String?
+    let tar: String?
+    let arch: KernelArch
+    let isRecommended: Bool
+
+    init(binary: String? = nil, tar: String? = nil, arch: KernelArch = .arm64, isRecommended: Bool = false) {
+        self.binary = binary
+        self.tar = tar
+        self.arch = arch
+        self.isRecommended = isRecommended
+    }
+}
+
+enum KernelArch: String, CaseIterable, Codable {
+    case amd64 = "amd64"
+    case arm64 = "arm64"
+
+    var displayName: String {
+        switch self {
+        case .amd64:
+            return "Intel (x86_64)"
+        case .arm64:
+            return "Apple Silicon (ARM64)"
+        }
+    }
+}
+
 // MARK: - Builder Models
 
 struct Builder: Codable, Equatable {
