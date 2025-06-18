@@ -65,12 +65,22 @@ struct SettingsView: View {
         .task {
             await containerService.loadDNSDomains()
         }
+        .onAppear {
+            Task {
+                await containerService.loadDNSDomains()
+            }
+        }
+        .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in
+            Task {
+                await containerService.loadDNSDomains()
+            }
+        }
         .alert("Error", isPresented: $showingErrorAlert) {
             Button("OK", role: .cancel) { }
         } message: {
             Text(errorMessage)
         }
-        .onChange(of: containerService.errorMessage) { oldValue, newValue in
+        .onChange(of: containerService.errorMessage) { _, newValue in
             if let error = newValue {
                 errorMessage = error
                 showingErrorAlert = true
@@ -209,26 +219,49 @@ struct SettingsView: View {
 
     private func dnsRow(domain: DNSDomain) -> some View {
         HStack {
-            VStack(alignment: .leading, spacing: 4) {
-                Text(domain.domain)
-                    .font(.system(.body, design: .monospaced))
-                    .fontWeight(.medium)
-
+            HStack(spacing: 12) {
+                // Default indicator icon
                 if domain.isDefault {
-                    Text("Default Domain")
-                        .font(.caption)
+                    SwiftUI.Image(systemName: "checkmark.circle.fill")
+                        .font(.system(size: 16))
                         .foregroundColor(.blue)
-                        .padding(.horizontal, 8)
-                        .padding(.vertical, 2)
-                        .background(Color.blue.opacity(0.1))
-                        .cornerRadius(4)
+                } else {
+                    SwiftUI.Image(systemName: "circle")
+                        .font(.system(size: 16))
+                        .foregroundColor(.secondary)
+                }
+
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(domain.domain)
+                        .font(.system(.body, design: .monospaced))
+                        .fontWeight(domain.isDefault ? .semibold : .medium)
+
+                    if domain.isDefault {
+                        Text("Default Domain")
+                            .font(.caption)
+                            .foregroundColor(.blue)
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 2)
+                            .background(Color.blue.opacity(0.15))
+                            .cornerRadius(4)
+                    }
                 }
             }
 
             Spacer()
 
             HStack(spacing: 8) {
-                if !domain.isDefault {
+                if domain.isDefault {
+                    Button("Unset Default") {
+                        Task {
+                            await containerService.unsetDefaultDNSDomain()
+                        }
+                    }
+                    .buttonStyle(.bordered)
+                    .controlSize(.small)
+                    .foregroundColor(.orange)
+                    .disabled(containerService.isDNSLoading)
+                } else {
                     Button("Set Default") {
                         Task {
                             await containerService.setDefaultDNSDomain(domain.domain)
@@ -236,6 +269,7 @@ struct SettingsView: View {
                     }
                     .buttonStyle(.bordered)
                     .controlSize(.small)
+                    .disabled(containerService.isDNSLoading)
                 }
 
                 Button("Delete") {
@@ -244,12 +278,17 @@ struct SettingsView: View {
                 .buttonStyle(.bordered)
                 .controlSize(.small)
                 .foregroundColor(.red)
+                .disabled(containerService.isDNSLoading)
             }
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 12)
         .background(Color(NSColor.controlBackgroundColor))
         .cornerRadius(8)
+        .overlay(
+            RoundedRectangle(cornerRadius: 8)
+                .stroke(domain.isDefault ? Color.blue.opacity(0.3) : Color.clear, lineWidth: 1)
+        )
     }
 
     // MARK: - Builder View
