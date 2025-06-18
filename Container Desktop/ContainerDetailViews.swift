@@ -10,12 +10,18 @@ struct ContainerDetailView: View {
 
     enum ContainerTab: String, CaseIterable {
         case overview = "Overview"
+        case network = "Network"
+        case environment = "Environment"
         case logs = "Logs"
 
         var systemImage: String {
             switch self {
             case .overview:
                 return "info.circle"
+            case .network:
+                return "network"
+            case .environment:
+                return "gearshape"
             case .logs:
                 return "doc.text"
             }
@@ -76,6 +82,10 @@ struct ContainerDetailView: View {
             switch selectedTab {
             case .overview:
                 containerOverviewTab
+            case .network:
+                containerNetworkTab
+            case .environment:
+                containerEnvironmentTab
             case .logs:
                 LogsView(containerId: container.configuration.id)
                     .environmentObject(containerService)
@@ -86,16 +96,12 @@ struct ContainerDetailView: View {
     private var containerOverviewTab: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 20) {
+
                 // Overview and Image side by side
                 HStack(alignment: .top, spacing: 20) {
                     containerOverviewSection(container: container)
                     containerImageSection(container: container)
                 }
-
-                Divider()
-
-                // Network section full width
-                containerNetworkSection(container: container)
 
                 Divider()
 
@@ -107,14 +113,29 @@ struct ContainerDetailView: View {
 
                 Divider()
 
-                // Environment variables section
-                containerEnvironmentSection(container: container)
-
-                Divider()
-
                 // Mounts section
                 containerMountsSection(container: container)
 
+                Spacer(minLength: 20)
+            }
+            .padding()
+        }
+    }
+
+    private var containerNetworkTab: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 20) {
+                containerNetworkSection(container: container)
+                Spacer(minLength: 20)
+            }
+            .padding()
+        }
+    }
+
+    private var containerEnvironmentTab: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 20) {
+                containerEnvironmentSection(container: container)
                 Spacer(minLength: 20)
             }
             .padding()
