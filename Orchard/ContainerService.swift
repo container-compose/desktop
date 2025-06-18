@@ -23,6 +23,142 @@ class ContainerService: ObservableObject {
     @Published var kernelConfig: KernelConfig = KernelConfig()
     @Published var isKernelLoading = false
     @Published var successMessage: String?
+    @Published var customBinaryPath: String?
+    @Published var refreshInterval: RefreshInterval = .fiveSeconds
+
+    private let defaultBinaryPath = "/usr/local/bin/container"
+    private let customBinaryPathKey = "OrchardCustomBinaryPath"
+    private let refreshIntervalKey = "OrchardRefreshInterval"
+
+    enum RefreshInterval: String, CaseIterable {
+        case fiveSeconds = "5"
+        case fifteenSeconds = "15"
+        case thirtySeconds = "30"
+
+        var displayName: String {
+            switch self {
+            case .fiveSeconds:
+                return "5 seconds"
+            case .fifteenSeconds:
+                return "15 seconds"
+            case .thirtySeconds:
+                return "30 seconds"
+            }
+        }
+
+        var timeInterval: TimeInterval {
+            return TimeInterval(rawValue) ?? 5.0
+        }
+    }
+
+    var containerBinaryPath: String {
+        let path = customBinaryPath ?? defaultBinaryPath
+        return validateBinaryPath(path) ? path : defaultBinaryPath
+    }
+
+    var isUsingCustomBinary: Bool {
+        guard let customPath = customBinaryPath else { return false }
+        return customPath != defaultBinaryPath && validateBinaryPath(customPath)
+    }
+
+    var currentDefaultDomain: String? {
+        return dnsDomains.first { $0.isDefault }?.domain
+    }
+
+    init() {
+        loadCustomBinaryPath()
+        loadRefreshInterval()
+    }
+
+    private func loadCustomBinaryPath() {
+        let userDefaults = UserDefaults.standard
+        if let savedPath = userDefaults.string(forKey: customBinaryPathKey), !savedPath.isEmpty {
+            customBinaryPath = savedPath
+        }
+    }
+
+    private func loadRefreshInterval() {
+        let userDefaults = UserDefaults.standard
+        if let savedInterval = userDefaults.string(forKey: refreshIntervalKey),
+           let interval = RefreshInterval(rawValue: savedInterval) {
+            refreshInterval = interval
+        }
+    }
+
+    func setCustomBinaryPath(_ path: String?) {
+        customBinaryPath = path
+        let userDefaults = UserDefaults.standard
+        if let path = path, !path.isEmpty {
+            userDefaults.set(path, forKey: customBinaryPathKey)
+        } else {
+            userDefaults.removeObject(forKey: customBinaryPathKey)
+        }
+    }
+
+    func resetToDefaultBinary() {
+        setCustomBinaryPath(nil)
+    }
+
+    func validateAndSetCustomBinaryPath(_ path: String?) -> Bool {
+        guard let path = path, !path.isEmpty else {
+            setCustomBinaryPath(nil)
+            return true
+        }
+
+        if validateBinaryPath(path) {
+            // If the selected path is the same as default, treat it as default
+            if path == defaultBinaryPath {
+                setCustomBinaryPath(nil)
+            } else {
+                setCustomBinaryPath(path)
+            }
+            return true
+        } else {
+            return false
+        }
+    }
+
+    func setRefreshInterval(_ interval: RefreshInterval) {
+        refreshInterval = interval
+        let userDefaults = UserDefaults.standard
+        userDefaults.set(interval.rawValue, forKey: refreshIntervalKey)
+    }
+
+    private func validateBinaryPath(_ path: String) -> Bool {
+        let fileManager = FileManager.default
+        var isDirectory: ObjCBool = false
+
+        // Check if file exists and is not a directory
+        guard fileManager.fileExists(atPath: path, isDirectory: &isDirectory),
+              !isDirectory.boolValue else {
+            return false
+        }
+
+        // Check if file is executable
+        guard fileManager.isExecutableFile(atPath: path) else {
+            return false
+        }
+
+        return true
+    }
+
+    private func safeContainerBinaryPath() -> String {
+        let currentPath = customBinaryPath ?? defaultBinaryPath
+
+        if validateBinaryPath(currentPath) {
+            return currentPath
+        } else {
+            // Reset to default if custom path is invalid
+            if customBinaryPath != nil {
+                DispatchQueue.main.async {
+                    self.customBinaryPath = nil
+                    self.errorMessage = "Invalid binary path detected. Reset to default: \(self.defaultBinaryPath)"
+                }
+                UserDefaults.standard.removeObject(forKey: customBinaryPathKey)
+            }
+            return defaultBinaryPath
+        }
+    }
 
     // Computed property to get all unique mounts from containers
     var allMounts: [ContainerMount] {
@@ -107,7 +243,7 @@ class ContainerService: ObservableObject {
         var result: ExecResult
         do {
             result = try exec(
-                program: "/usr/local/bin/container",
+                program: safeContainerBinaryPath(),
                 arguments: ["ls", "--format", "json"])
         } catch {
             let error = error as! ExecError
@@ -149,7 +285,7 @@ class ContainerService: ObservableObject {
         var result: ExecResult
         do {
             result = try exec(
-                program: "/usr/local/bin/container",
+                program: safeContainerBinaryPath(),
                 arguments: ["images", "list", "--format", "json"])
         } catch {
             let error = error as! ExecError
@@ -189,7 +325,7 @@ class ContainerService: ObservableObject {
         var result: ExecResult
         do {
             result = try exec(
-                program: "/usr/local/bin/container",
+                program: safeContainerBinaryPath(),
                 arguments: ["builder", "status", "--json"])
         } catch {
             let error = error as! ExecError
@@ -266,7 +402,7 @@ class ContainerService: ObservableObject {
         do {
             // Get default registry
             let defaultResult = try exec(
-                program: "/usr/local/bin/container",
+                program: safeContainerBinaryPath(),
                 arguments: ["registry", "default", "inspect"])
 
             let defaultRegistry = defaultResult.stdout?.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -312,7 +448,7 @@ class ContainerService: ObservableObject {
         var result: ExecResult
         do {
             result = try exec(
-                program: "/usr/local/bin/container",
+                program: safeContainerBinaryPath(),
                 arguments: ["stop", id])
 
             await MainActor.run {
@@ -349,7 +485,7 @@ class ContainerService: ObservableObject {
         var result: ExecResult
         do {
             result = try exec(
-                program: "/usr/local/bin/container",
+                program: safeContainerBinaryPath(),
                 arguments: ["ls"])
 
             await MainActor.run {
@@ -372,7 +508,7 @@ class ContainerService: ObservableObject {
         var result: ExecResult
         do {
             result = try exec(
-                program: "/usr/local/bin/container",
+                program: safeContainerBinaryPath(),
                 arguments: ["system", "start"])
 
             await MainActor.run {
@@ -404,7 +540,7 @@ class ContainerService: ObservableObject {
         var result: ExecResult
         do {
             result = try exec(
-                program: "/usr/local/bin/container",
+                program: safeContainerBinaryPath(),
                 arguments: ["system", "stop"])
 
             await MainActor.run {
@@ -436,7 +572,7 @@ class ContainerService: ObservableObject {
         var result: ExecResult
         do {
             result = try exec(
-                program: "/usr/local/bin/container",
+                program: safeContainerBinaryPath(),
                 arguments: ["system", "restart"])
 
             await MainActor.run {
@@ -468,7 +604,7 @@ class ContainerService: ObservableObject {
         var result: ExecResult
         do {
             result = try exec(
-                program: "/usr/local/bin/container",
+                program: safeContainerBinaryPath(),
                 arguments: ["start", id])
         } catch {
             let error = error as! ExecError
@@ -576,7 +712,7 @@ class ContainerService: ObservableObject {
         var result: ExecResult
         do {
             result = try exec(
-                program: "/usr/local/bin/container",
+                program: safeContainerBinaryPath(),
                 arguments: ["builder", "start"])
 
             await MainActor.run {
@@ -615,7 +751,7 @@ class ContainerService: ObservableObject {
         var result: ExecResult
         do {
             result = try exec(
-                program: "/usr/local/bin/container",
+                program: safeContainerBinaryPath(),
                 arguments: ["builder", "stop"])
 
             await MainActor.run {
@@ -654,7 +790,7 @@ class ContainerService: ObservableObject {
         var result: ExecResult
         do {
             result = try exec(
-                program: "/usr/local/bin/container",
+                program: safeContainerBinaryPath(),
                 arguments: ["builder", "delete"])
 
             await MainActor.run {
@@ -691,7 +827,7 @@ class ContainerService: ObservableObject {
         var result: ExecResult
         do {
             result = try exec(
-                program: "/usr/local/bin/container",
+                program: safeContainerBinaryPath(),
                 arguments: ["rm", id])
 
             await MainActor.run {
@@ -727,7 +863,7 @@ class ContainerService: ObservableObject {
         var result: ExecResult
         do {
             result = try exec(
-                program: "/usr/local/bin/container",
+                program: safeContainerBinaryPath(),
                 arguments: ["logs", containerId])
         } catch {
             let error = error as! ExecError
@@ -753,12 +889,12 @@ class ContainerService: ObservableObject {
         do {
             // Get list of domains
             let listResult = try exec(
-                program: "/usr/local/bin/container",
+                program: safeContainerBinaryPath(),
                 arguments: ["system", "dns", "ls"])
 
             // Get default domain
             let defaultResult = try exec(
-                program: "/usr/local/bin/container",
+                program: safeContainerBinaryPath(),
                 arguments: ["system", "dns", "default", "inspect"])
 
             if let output = listResult.stdout {
@@ -780,7 +916,7 @@ class ContainerService: ObservableObject {
     func createDNSDomain(_ domain: String) async {
         do {
             let result = try execWithSudo(
-                program: "/usr/local/bin/container",
+                program: safeContainerBinaryPath(),
                 arguments: ["system", "dns", "create", domain])
 
             if !result.failed {
@@ -805,7 +941,7 @@ class ContainerService: ObservableObject {
             // If it's the default domain, unset it first
             if isDefaultDomain {
                 let unsetResult = try exec(
-                    program: "/usr/local/bin/container",
+                    program: safeContainerBinaryPath(),
                     arguments: ["system", "dns", "default", "unset"])
 
                 if unsetResult.failed {
@@ -817,7 +953,7 @@ class ContainerService: ObservableObject {
             }
 
             let result = try execWithSudo(
-                program: "/usr/local/bin/container",
+                program: safeContainerBinaryPath(),
                 arguments: ["system", "dns", "delete", domain])
 
             if !result.failed {
@@ -841,7 +977,7 @@ class ContainerService: ObservableObject {
 
         do {
             let result = try exec(
-                program: "/usr/local/bin/container",
+                program: safeContainerBinaryPath(),
                 arguments: ["system", "dns", "default", "set", domain])
 
             if !result.failed {
@@ -867,7 +1003,7 @@ class ContainerService: ObservableObject {
 
         do {
             let result = try exec(
-                program: "/usr/local/bin/container",
+                program: safeContainerBinaryPath(),
                 arguments: ["system", "dns", "default", "unset"])
 
             if !result.failed {
@@ -949,7 +1085,7 @@ class ContainerService: ObservableObject {
 
         do {
             let result = try exec(
-                program: "/usr/local/bin/container",
+                program: safeContainerBinaryPath(),
                 arguments: ["system", "kernel", "set", "--recommended"])
 
             if !result.failed {
@@ -1001,7 +1137,7 @@ class ContainerService: ObservableObject {
             }
 
             let result = try exec(
-                program: "/usr/local/bin/container",
+                program: safeContainerBinaryPath(),
                 arguments: arguments)
 
             if !result.failed {
@@ -1040,7 +1176,7 @@ class ContainerService: ObservableObject {
 
             // Create a process to handle password input
             let process = Process()
-            process.executableURL = URL(fileURLWithPath: "/usr/local/bin/container")
+            process.executableURL = URL(fileURLWithPath: safeContainerBinaryPath())
             process.arguments = arguments + ["--password-stdin"]
 
             let inputPipe = Pipe()
@@ -1087,7 +1223,7 @@ class ContainerService: ObservableObject {
 
         do {
             let result = try exec(
-                program: "/usr/local/bin/container",
+                program: safeContainerBinaryPath(),
                 arguments: ["registry", "logout", server])
 
             if !result.failed {
@@ -1116,7 +1252,7 @@ class ContainerService: ObservableObject {
 
         do {
             let result = try exec(
-                program: "/usr/local/bin/container",
+                program: safeContainerBinaryPath(),
                 arguments: ["registry", "default", "set", server])
 
             if !result.failed {
@@ -1145,7 +1281,7 @@ class ContainerService: ObservableObject {
 
         do {
             let result = try exec(
-                program: "/usr/local/bin/container",
+                program: safeContainerBinaryPath(),
                 arguments: ["registry", "default", "unset"])
 
             if !result.failed {

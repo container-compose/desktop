@@ -159,18 +159,36 @@ struct MenuBarView: View {
             await containerService.loadContainers()
             await containerService.loadBuilders()
 
-            // Set up periodic refresh
-            refreshTimer = Timer.scheduledTimer(withTimeInterval: 5.0, repeats: true) { _ in
-                Task { @MainActor in
-                    await containerService.checkSystemStatus()
-                    await containerService.loadContainers()
-                    await containerService.loadBuilders()
-                }
-            }
+            startRefreshTimer()
         }
         .onDisappear {
-            refreshTimer?.invalidate()
-            refreshTimer = nil
+            stopRefreshTimer()
+        }
+        .onChange(of: containerService.refreshInterval) { _, _ in
+            restartRefreshTimer()
         }
     }
+
+    private func startRefreshTimer() {
+        refreshTimer = Timer.scheduledTimer(withTimeInterval: containerService.refreshInterval.timeInterval, repeats: true) { _ in
+            Task { @MainActor in
+                await containerService.checkSystemStatus()
+                await containerService.loadContainers()
+                await containerService.loadBuilders()
+                await containerService.loadRegistries()
+                await containerService.loadDNSDomains()
+            }
+        }
+    }
+
+    private func stopRefreshTimer() {
+        refreshTimer?.invalidate()
+        refreshTimer = nil
+    }
+
+    private func restartRefreshTimer() {
+        stopRefreshTimer()
+        startRefreshTimer()
+    }
+
 }

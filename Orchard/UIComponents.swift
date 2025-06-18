@@ -550,8 +550,42 @@ struct AppFooter: View {
 
     var body: some View {
         HStack {
+            // Left side - Registry, Domain, and Binary info
+            HStack(spacing: 16) {
+                // Default Registry
+                HStack(spacing: 4) {
+                    SwiftUI.Image(systemName: "externaldrive.connected.to.line.below")
+                        .font(.system(size: 11))
+                        .foregroundColor(.secondary)
+                    Text("Registry: \(containerService.defaultRegistry ?? "None")")
+                        .font(.system(size: 11))
+                        .foregroundColor(.secondary)
+                }
+
+                // Default Domain
+                HStack(spacing: 4) {
+                    SwiftUI.Image(systemName: "globe")
+                        .font(.system(size: 11))
+                        .foregroundColor(.secondary)
+                    Text("Domain: \(containerService.currentDefaultDomain ?? "None")")
+                        .font(.system(size: 11))
+                        .foregroundColor(.secondary)
+                }
+
+                // Binary Status
+                HStack(spacing: 4) {
+                    SwiftUI.Image(systemName: containerService.isUsingCustomBinary ? "terminal.fill" : "terminal")
+                        .font(.system(size: 11))
+                        .foregroundColor(containerService.isUsingCustomBinary ? .blue : .secondary)
+                    Text(containerService.isUsingCustomBinary ? "Custom Binary" : "Default Binary")
+                        .font(.system(size: 11))
+                        .foregroundColor(containerService.isUsingCustomBinary ? .blue : .secondary)
+                }
+            }
+
             Spacer()
 
+            // Right side - System Status
             HStack(spacing: 6) {
                 SwiftUI.Image(systemName: "button.programmable")
                     .foregroundColor(combinedSystemStatusColor)
@@ -567,8 +601,7 @@ struct AppFooter: View {
                 transaction.animation = nil
             }
         }
-        .padding(.horizontal, 12)
-        .frame(height: 20)
+        .padding(12)
         .background(Color(NSColor.controlBackgroundColor))
         .overlay(
             Rectangle()

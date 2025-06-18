@@ -280,21 +280,40 @@ struct ContentView: View {
             await containerService.loadContainers()
             await containerService.loadImages()
             await containerService.loadBuilders()
+            await containerService.loadRegistries()
+            await containerService.loadDNSDomains()
 
-            // Set up periodic refresh timer
-            refreshTimer = Timer.scheduledTimer(withTimeInterval: 5.0, repeats: true) { _ in
-                Task { @MainActor in
-                    await containerService.checkSystemStatus()
-                    await containerService.loadContainers()
-                    await containerService.loadImages()
-                    await containerService.loadBuilders()
-                }
-            }
+            startRefreshTimer()
         }
         .onDisappear {
-            refreshTimer?.invalidate()
-            refreshTimer = nil
+            stopRefreshTimer()
         }
+        .onChange(of: containerService.refreshInterval) { _, _ in
+            restartRefreshTimer()
+        }
+    }
+
+    private func startRefreshTimer() {
+        refreshTimer = Timer.scheduledTimer(withTimeInterval: containerService.refreshInterval.timeInterval, repeats: true) { _ in
+            Task { @MainActor in
+                await containerService.checkSystemStatus()
+                await containerService.loadContainers()
+                await containerService.loadImages()
+                await containerService.loadBuilders()
+                await containerService.loadRegistries()
+                await containerService.loadDNSDomains()
+            }
+        }
+    }
+
+    private func stopRefreshTimer() {
+        refreshTimer?.invalidate()
+        refreshTimer = nil
+    }
+
+    private func restartRefreshTimer() {
+        stopRefreshTimer()
+        startRefreshTimer()
     }
 
     private var primaryColumnView: some View {
