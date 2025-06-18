@@ -1,5 +1,6 @@
 import AppKit
 import SwiftUI
+import Foundation
 
 // MARK: - Container Components
 
@@ -495,5 +496,85 @@ struct CursorModifier: ViewModifier {
                         }
                     }
             )
+    }
+}
+
+struct CopyButton: View {
+    let text: String
+    let label: String
+    @State private var showingFeedback = false
+
+    var body: some View {
+        Button {
+            let pasteboard = NSPasteboard.general
+            pasteboard.clearContents()
+            pasteboard.setString(text, forType: .string)
+
+            showingFeedback = true
+            DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
+                showingFeedback = false
+            }
+        } label: {
+            SwiftUI.Image(systemName: showingFeedback ? "checkmark" : "doc.on.doc")
+                .font(.caption)
+                .foregroundColor(showingFeedback ? .white : .secondary)
+                .background(showingFeedback ? Color.green : Color.clear)
+                .clipShape(Circle())
+        }
+        .buttonStyle(.plain)
+        .help(label)
+    }
+}
+
+struct AppFooter: View {
+    @EnvironmentObject var containerService: ContainerService
+
+    private var combinedSystemStatusColor: Color {
+        let systemRunning = containerService.systemStatus == .running
+        let builderRunning = containerService.builderStatus == .running
+
+        if systemRunning && builderRunning {
+            return .green
+        } else if systemRunning && !builderRunning {
+            return .orange
+        } else {
+            return .red
+        }
+    }
+
+    private var combinedSystemStatusText: String {
+        let systemText = containerService.systemStatus.text
+        let builderText = containerService.builderStatus.text
+        return "Container System: \(systemText)\nBuilder: \(builderText)"
+    }
+
+    var body: some View {
+        HStack {
+            Spacer()
+
+            HStack(spacing: 6) {
+                SwiftUI.Image(systemName: "button.programmable")
+                    .foregroundColor(combinedSystemStatusColor)
+                    .font(.system(size: 12))
+
+                Text(combinedSystemStatusText)
+                    .font(.system(size: 11))
+                    .foregroundColor(.secondary)
+                    .lineLimit(1)
+            }
+            .help(combinedSystemStatusText)
+            .transaction { transaction in
+                transaction.animation = nil
+            }
+        }
+        .padding(.horizontal, 12)
+        .frame(height: 20)
+        .background(Color(NSColor.controlBackgroundColor))
+        .overlay(
+            Rectangle()
+                .frame(height: 0.5)
+                .foregroundColor(Color(NSColor.separatorColor)),
+            alignment: .top
+        )
     }
 }
