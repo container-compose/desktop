@@ -1,6 +1,6 @@
 //
-//  Container_DesktopApp.swift
-//  Container Desktop
+//  OrchardApp.swift
+//  Orchard
 //
 //  Created by Andrew Waters on 16/06/2025.
 //
@@ -8,7 +8,7 @@
 import SwiftUI
 
 @main
-struct Container_DesktopApp: App {
+struct OrchardApp: App {
     @StateObject private var containerService = ContainerService()
     @StateObject private var menuBarManager = MenuBarManager()
 
@@ -19,7 +19,7 @@ struct Container_DesktopApp: App {
         }
         .windowToolbarStyle(.unifiedCompact)
 
-        MenuBarExtra("Container Desktop", systemImage: "cube.box") {
+        MenuBarExtra("Orchard", systemImage: "cube.box") {
             MenuBarView()
                 .environmentObject(containerService)
         }
@@ -142,7 +142,7 @@ struct MenuBarView: View {
             }
             .disabled(containerService.isSystemLoading || containerService.systemStatus == .stopped)
 
-            Button("Quit Container Compose") {
+            Button("Quit Orchard") {
                 NSApplication.shared.terminate(nil)
             }
         }

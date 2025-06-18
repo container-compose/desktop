@@ -1,13 +1,13 @@
 //
-//  Container_DesktopUITests.swift
-//  Container DesktopUITests
+//  OrchardUITests.swift
+//  OrchardUITests
 //
 //  Created by Andrew Waters on 16/06/2025.
 //
 
 import XCTest
 
-final class Container_DesktopUITests: XCTestCase {
+final class OrchardUITests: XCTestCase {
 
     override func setUpWithError() throws {
         // Put setup code here. This method is called before the invocation of each test method in the class.
