@@ -8,7 +8,7 @@ The ambition of the project is to allow it easy for developers to switch from Do
 
 ![container overview screen](assets/overview.png)
 
-In addition, there is a side project (cli) which aims to provide the same ergonomics as `docker compose` in a single binary that interacts with containers.
+In addition, there is a companion side project ([cli](https://github.com/container-compose/cli) which aims to provide the same ergonomics as `docker compose` that interacts with containers and can use your existing docker compose files.
 
 Both projects are new - the tech has only been available for a week! So there is a lot more to do to make this useful. Feedback is naturally welcome.
 
