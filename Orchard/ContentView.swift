@@ -183,96 +183,97 @@ struct ContentView: View {
     }
 
     private var mainInterfaceView: some View {
-        NavigationSplitView {
-            primaryColumnView
-                .navigationSplitViewColumnWidth(
-                    min: 400, ideal: 500, max: 600)
-        } detail: {
-            detailView
-        }
-        .navigationTitle("")
-        .toolbar {
-            ToolbarItemGroup(placement: .navigation) {
-                // Xcode-style breadcrumb navigation
-                HStack(spacing: 4) {
-                    // Tab switcher
-                    Button(selectedTab.title) {
-                        showingTabSwitcherPopover = true
-                    }
-                    .buttonStyle(.plain)
-                    .foregroundColor(.secondary)
-                    .popover(isPresented: $showingTabSwitcherPopover) {
-                        tabSwitcherPopoverView
-                    }
-
-                    if !currentResourceTitle.isEmpty {
-                        SwiftUI.Image(systemName: "chevron.right")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-
-                        // Current resource with item navigator
-                        Button(currentResourceTitle) {
-                            showingItemNavigatorPopover = true
+        VStack(spacing: 0) {
+            NavigationSplitView {
+                primaryColumnView
+                    .navigationSplitViewColumnWidth(
+                        min: 400, ideal: 500, max: 600)
+            } detail: {
+                detailView
+            }
+            .navigationTitle("")
+            .toolbar {
+                ToolbarItemGroup(placement: .navigation) {
+                    // Xcode-style breadcrumb navigation
+                    HStack(spacing: 4) {
+                        // Tab switcher
+                        Button(selectedTab.title) {
+                            showingTabSwitcherPopover = true
                         }
                         .buttonStyle(.plain)
-                        .fontWeight(.medium)
-                        .foregroundColor(.primary)
-                        .popover(isPresented: $showingItemNavigatorPopover) {
-                            itemNavigatorPopoverView
+                        .foregroundColor(.secondary)
+                        .popover(isPresented: $showingTabSwitcherPopover) {
+                            tabSwitcherPopoverView
+                        }
+
+                        if !currentResourceTitle.isEmpty {
+                            SwiftUI.Image(systemName: "chevron.right")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+
+                            // Current resource with item navigator
+                            Button(currentResourceTitle) {
+                                showingItemNavigatorPopover = true
+                            }
+                            .buttonStyle(.plain)
+                            .fontWeight(.medium)
+                            .foregroundColor(.primary)
+                            .popover(isPresented: $showingItemNavigatorPopover) {
+                                itemNavigatorPopoverView
+                            }
                         }
                     }
-                }
 
-                if let container = currentContainer {
-                    ContainerControlButton(
-                        container: container,
-                        isLoading: containerService.loadingContainers.contains(
-                            container.configuration.id),
-                        onStart: {
-                            Task { @MainActor in
-                                await containerService.startContainer(container.configuration.id)
-                            }
-                        },
-                        onStop: {
-                            Task { @MainActor in
-                                await containerService.stopContainer(container.configuration.id)
-                            }
-                        }
-                    )
-
-                    if container.status.lowercased() != "running" {
-                        ContainerRemoveButton(
+                    if let container = currentContainer {
+                        ContainerControlButton(
                             container: container,
                             isLoading: containerService.loadingContainers.contains(
                                 container.configuration.id),
-                            onRemove: {
+                            onStart: {
                                 Task { @MainActor in
-                                    await containerService.removeContainer(container.configuration.id)
+                                    await containerService.startContainer(container.configuration.id)
+                                }
+                            },
+                            onStop: {
+                                Task { @MainActor in
+                                    await containerService.stopContainer(container.configuration.id)
                                 }
                             }
                         )
+
+                        if container.status.lowercased() != "running" {
+                            ContainerRemoveButton(
+                                container: container,
+                                isLoading: containerService.loadingContainers.contains(
+                                    container.configuration.id),
+                                onRemove: {
+                                    Task { @MainActor in
+                                        await containerService.removeContainer(container.configuration.id)
+                                    }
+                                }
+                            )
+                        }
+
+                    } else if let image = currentImage {
+
+                        // no real actions or conveniences here yet
+
+                    } else if let mount = currentMount {
+
+                        Button(action: {
+                            NSWorkspace.shared.open(URL(fileURLWithPath: mount.mount.source))
+                        }) {
+                            SwiftUI.Image(systemName: "folder")
+                                .font(.system(size: 14, weight: .medium))
+                        }
+                        .buttonStyle(.borderless)
+                        .help("Open in Finder")
                     }
-
-                } else if let image = currentImage {
-
-                    // no real actions or conveniences here yet
-
-                } else if let mount = currentMount {
-
-                    Button(action: {
-                        NSWorkspace.shared.open(URL(fileURLWithPath: mount.mount.source))
-                    }) {
-                        SwiftUI.Image(systemName: "folder")
-                            .font(.system(size: 14, weight: .medium))
-                    }
-                    .buttonStyle(.borderless)
-                    .help("Open in Finder")
                 }
             }
 
-            ToolbarItemGroup(placement: .primaryAction) {
-                systemStatusView
-            }
+            AppFooter()
+                .environmentObject(containerService)
         }
         .task {
             await containerService.checkSystemStatus()
@@ -649,33 +650,7 @@ struct ContentView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
-    private var systemStatusView: some View {
-        SwiftUI.Image(systemName: "button.programmable")
-            .foregroundColor(combinedSystemStatusColor)
-            .help(combinedSystemStatusText)
-            .transaction { transaction in
-                transaction.animation = nil
-            }
-    }
 
-    private var combinedSystemStatusColor: Color {
-        let systemRunning = containerService.systemStatus == .running
-        let builderRunning = containerService.builderStatus == .running
-
-        if systemRunning && builderRunning {
-            return .green
-        } else if systemRunning && !builderRunning {
-            return .orange
-        } else {
-            return .red
-        }
-    }
-
-    private var combinedSystemStatusText: String {
-        let systemText = containerService.systemStatus.text
-        let builderText = containerService.builderStatus.text
-        return "Container System: \(systemText)\nBuilder: \(builderText)"
-    }
 
 
 

@@ -698,32 +698,32 @@ struct ContainerImageDetailView: View {
     }
 }
 
-struct CopyButton: View {
-    let text: String
-    let label: String
-    @State private var showingFeedback = false
-
-    var body: some View {
-        Button {
-            let pasteboard = NSPasteboard.general
-            pasteboard.clearContents()
-            pasteboard.setString(text, forType: .string)
-
-            showingFeedback = true
-            DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
-                showingFeedback = false
-            }
-        } label: {
-            SwiftUI.Image(systemName: showingFeedback ? "checkmark" : "doc.on.doc")
-                .font(.caption)
-                .foregroundColor(showingFeedback ? .white : .secondary)
-                .background(showingFeedback ? Color.green : Color.clear)
-                .clipShape(Circle())
-        }
-        .buttonStyle(.plain)
-        .help(label)
-    }
-}
+//struct CopyButton: View {
+//    let text: String
+//    let label: String
+//    @State private var showingFeedback = false
+//
+//    var body: some View {
+//        Button {
+//            let pasteboard = NSPasteboard.general
+//            pasteboard.clearContents()
+//            pasteboard.setString(text, forType: .string)
+//
+//            showingFeedback = true
+//            DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
+//                showingFeedback = false
+//            }
+//        } label: {
+//            SwiftUI.Image(systemName: showingFeedback ? "checkmark" : "doc.on.doc")
+//                .font(.caption)
+//                .foregroundColor(showingFeedback ? .white : .secondary)
+//                .background(showingFeedback ? Color.green : Color.clear)
+//                .clipShape(Circle())
+//        }
+//        .buttonStyle(.plain)
+//        .help(label)
+//    }
+//}
 
 struct ContainerImageUsageRow: View {
     let container: Container
