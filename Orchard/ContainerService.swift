@@ -15,6 +15,8 @@ class ContainerService: ObservableObject {
     @Published var loadingContainers: Set<String> = []
     @Published var isBuilderLoading = false
     @Published var builderStatus: BuilderStatus = .stopped
+    @Published var dnsDomains: [DNSDomain] = []
+    @Published var isDNSLoading = false
 
     // Computed property to get all unique mounts from containers
     var allMounts: [ContainerMount] {
@@ -691,6 +693,136 @@ class ContainerService: ObservableObject {
         } else {
             return ""
         }
+    }
+
+    // MARK: - DNS Management
+
+    func loadDNSDomains() async {
+        await MainActor.run {
+            isDNSLoading = true
+        }
+
+        do {
+            // Get list of domains
+            let listResult = try exec(
+                program: "/usr/local/bin/container",
+                arguments: ["system", "dns", "ls"])
+
+            // Get default domain
+            let defaultResult = try exec(
+                program: "/usr/local/bin/container",
+                arguments: ["system", "dns", "default", "inspect"])
+
+            if let output = listResult.stdout {
+                let defaultDomain = defaultResult.stdout?.trimmingCharacters(in: .whitespacesAndNewlines)
+                let domains = parseDNSDomains(output, defaultDomain: defaultDomain)
+                await MainActor.run {
+                    self.dnsDomains = domains
+                    self.isDNSLoading = false
+                }
+            }
+        } catch {
+            await MainActor.run {
+                self.errorMessage = "Failed to load DNS domains: \(error.localizedDescription)"
+                self.isDNSLoading = false
+            }
+        }
+    }
+
+    func createDNSDomain(_ domain: String) async {
+        do {
+            let result = try execWithSudo(
+                program: "/usr/local/bin/container",
+                arguments: ["system", "dns", "create", domain])
+
+            if !result.failed {
+                await loadDNSDomains()
+            } else {
+                await MainActor.run {
+                    self.errorMessage = result.stderr ?? "Failed to create DNS domain"
+                }
+            }
+        } catch {
+            await MainActor.run {
+                self.errorMessage = "Failed to create DNS domain: \(error.localizedDescription)"
+            }
+        }
+    }
+
+    func deleteDNSDomain(_ domain: String) async {
+        do {
+            let result = try execWithSudo(
+                program: "/usr/local/bin/container",
+                arguments: ["system", "dns", "delete", domain])
+
+            if !result.failed {
+                await loadDNSDomains()
+            } else {
+                await MainActor.run {
+                    self.errorMessage = result.stderr ?? "Failed to delete DNS domain"
+                }
+            }
+        } catch {
+            await MainActor.run {
+                self.errorMessage = "Failed to delete DNS domain: \(error.localizedDescription)"
+            }
+        }
+    }
+
+    func setDefaultDNSDomain(_ domain: String) async {
+        do {
+            let result = try execWithSudo(
+                program: "/usr/local/bin/container",
+                arguments: ["system", "dns", "default", "set", domain])
+
+            if !result.failed {
+                await loadDNSDomains()
+            } else {
+                await MainActor.run {
+                    self.errorMessage = result.stderr ?? "Failed to set default DNS domain"
+                }
+            }
+        } catch {
+            await MainActor.run {
+                self.errorMessage = "Failed to set default DNS domain: \(error.localizedDescription)"
+            }
+        }
+    }
+
+    private func parseDNSDomains(_ output: String, defaultDomain: String?) -> [DNSDomain] {
+        let lines = output.components(separatedBy: .newlines)
+        var domains: [DNSDomain] = []
+
+        for line in lines {
+            let trimmed = line.trimmingCharacters(in: .whitespaces)
+            if !trimmed.isEmpty && !trimmed.starts(with: "DOMAIN") {
+                let components = trimmed.components(separatedBy: .whitespaces)
+                if let domain = components.first {
+                    let isDefault = domain == defaultDomain
+                    domains.append(DNSDomain(domain: domain, isDefault: isDefault))
+                }
+            }
+        }
+
+        return domains
+    }
+
+    // MARK: - Sudo Helper
+
+    private func execWithSudo(program: String, arguments: [String]) throws -> ExecResult {
+        // Create the command string
+        let fullCommand = "\(program) \(arguments.joined(separator: " "))"
+
+        // Use osascript to prompt for password and execute with sudo
+        let script = """
+        do shell script "\(fullCommand)" with administrator privileges
+        """
+
+        let result = try exec(
+            program: "/usr/bin/osascript",
+            arguments: ["-e", script])
+
+        return result
     }
 }
 
