@@ -20,6 +20,11 @@ struct OrchardApp: App {
         }
         .windowToolbarStyle(.unifiedCompact)
 
+        Settings {
+            SettingsView()
+                .environmentObject(containerService)
+        }
+
         MenuBarExtra("Orchard", systemImage: "cube.box") {
             MenuBarView()
                 .environmentObject(containerService)

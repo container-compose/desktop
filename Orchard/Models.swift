@@ -241,6 +241,20 @@ struct ContainerMount: Identifiable, Equatable {
     }
 }
 
+// MARK: - DNS Models
+
+struct DNSDomain: Codable, Equatable, Identifiable {
+    let domain: String
+    let isDefault: Bool
+
+    var id: String { domain }
+
+    init(domain: String, isDefault: Bool = false) {
+        self.domain = domain
+        self.isDefault = isDefault
+    }
+}
+
 // MARK: - Builder Models
 
 struct Builder: Codable, Equatable {

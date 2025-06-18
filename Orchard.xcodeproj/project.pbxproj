@@ -16,37 +16,37 @@
 			containerPortal = C25FE6DF2E00C69400A8CD32 /* Project object */;
 			proxyType = 1;
 			remoteGlobalIDString = C25FE6E62E00C69400A8CD32;
-			remoteInfo = "Orchard";
+			remoteInfo = Orchard;
 		};
 		C25FE7002E00C69500A8CD32 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = C25FE6DF2E00C69400A8CD32 /* Project object */;
 			proxyType = 1;
 			remoteGlobalIDString = C25FE6E62E00C69400A8CD32;
-			remoteInfo = "Orchard";
+			remoteInfo = Orchard;
 		};
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
-		C25FE6E72E00C69400A8CD32 /* Orchard.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Orchard.app"; sourceTree = BUILT_PRODUCTS_DIR; };
-		C25FE6F52E00C69500A8CD32 /* OrchardTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "OrchardTests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
-		C25FE6FF2E00C69500A8CD32 /* OrchardUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "OrchardUITests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
+		C25FE6E72E00C69400A8CD32 /* Orchard.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Orchard.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		C25FE6F52E00C69500A8CD32 /* OrchardTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = OrchardTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		C25FE6FF2E00C69500A8CD32 /* OrchardUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = OrchardUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		C25FE6E92E00C69400A8CD32 /* Orchard */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			path = "Orchard";
+			path = Orchard;
 			sourceTree = "<group>";
 		};
 		C25FE6F82E00C69500A8CD32 /* OrchardTests */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			path = "OrchardTests";
+			path = OrchardTests;
 			sourceTree = "<group>";
 		};
 		C25FE7022E00C69500A8CD32 /* OrchardUITests */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			path = "OrchardUITests";
+			path = OrchardUITests;
 			sourceTree = "<group>";
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */
@@ -115,11 +115,11 @@
 			fileSystemSynchronizedGroups = (
 				C25FE6E92E00C69400A8CD32 /* Orchard */,
 			);
-			name = "Orchard";
+			name = Orchard;
 			packageProductDependencies = (
 				C25FE7362E00CF9B00A8CD32 /* SwiftExec */,
 			);
-			productName = "Orchard";
+			productName = Orchard;
 			productReference = C25FE6E72E00C69400A8CD32 /* Orchard.app */;
 			productType = "com.apple.product-type.application";
 		};
@@ -139,10 +139,10 @@
 			fileSystemSynchronizedGroups = (
 				C25FE6F82E00C69500A8CD32 /* OrchardTests */,
 			);
-			name = "OrchardTests";
+			name = OrchardTests;
 			packageProductDependencies = (
 			);
-			productName = "OrchardTests";
+			productName = OrchardTests;
 			productReference = C25FE6F52E00C69500A8CD32 /* OrchardTests.xctest */;
 			productType = "com.apple.product-type.bundle.unit-test";
 		};
@@ -162,10 +162,10 @@
 			fileSystemSynchronizedGroups = (
 				C25FE7022E00C69500A8CD32 /* OrchardUITests */,
 			);
-			name = "OrchardUITests";
+			name = OrchardUITests;
 			packageProductDependencies = (
 			);
-			productName = "OrchardUITests";
+			productName = OrchardUITests;
 			productReference = C25FE6FF2E00C69500A8CD32 /* OrchardUITests.xctest */;
 			productType = "com.apple.product-type.bundle.ui-testing";
 		};
@@ -397,7 +397,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
-				CODE_SIGN_ENTITLEMENTS = "Orchard/Orchard.entitlements";
+				CODE_SIGN_ENTITLEMENTS = Orchard/Orchard.entitlements;
 				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "-";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
@@ -436,7 +436,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
-				CODE_SIGN_ENTITLEMENTS = "Orchard/Orchard.entitlements";
+				CODE_SIGN_ENTITLEMENTS = Orchard/Orchard.entitlements;
 				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "-";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
@@ -530,7 +530,7 @@
 				SWIFT_EMIT_LOC_STRINGS = NO;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2,7";
-				TEST_TARGET_NAME = "Orchard";
+				TEST_TARGET_NAME = Orchard;
 				XROS_DEPLOYMENT_TARGET = 2.5;
 			};
 			name = Debug;
@@ -551,7 +551,7 @@
 				SWIFT_EMIT_LOC_STRINGS = NO;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2,7";
-				TEST_TARGET_NAME = "Orchard";
+				TEST_TARGET_NAME = Orchard;
 				XROS_DEPLOYMENT_TARGET = 2.5;
 			};
 			name = Release;
