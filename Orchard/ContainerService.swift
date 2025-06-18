@@ -25,10 +25,19 @@ class ContainerService: ObservableObject {
     @Published var successMessage: String?
     @Published var customBinaryPath: String?
     @Published var refreshInterval: RefreshInterval = .fiveSeconds
+    @Published var updateAvailable: Bool = false
+    @Published var latestVersion: String?
+    @Published var isCheckingForUpdates: Bool = false
 
     private let defaultBinaryPath = "/usr/local/bin/container"
     private let customBinaryPathKey = "OrchardCustomBinaryPath"
     private let refreshIntervalKey = "OrchardRefreshInterval"
+    private let lastUpdateCheckKey = "OrchardLastUpdateCheck"
+
+    // App version info
+    let currentVersion = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0.0"
+    let githubRepo = "container-compose/orchard" // Replace with actual repo
+    private let updateCheckInterval: TimeInterval = 1 * 60 * 60 // 1 hour
 
     enum RefreshInterval: String, CaseIterable {
         case fiveSeconds = "5"
@@ -122,6 +131,84 @@ class ContainerService: ObservableObject {
         refreshInterval = interval
         let userDefaults = UserDefaults.standard
         userDefaults.set(interval.rawValue, forKey: refreshIntervalKey)
+    }
+
+    // MARK: - Update Management
+
+    func checkForUpdates() async {
+        await MainActor.run {
+            isCheckingForUpdates = true
+        }
+
+        do {
+            let url = URL(string: "https://api.github.com/repos/\(githubRepo)/releases/latest")!
+            let (data, _) = try await URLSession.shared.data(from: url)
+
+            if let json = try JSONSerialization.jsonObject(with: data) as? [String: Any],
+               let tagName = json["tag_name"] as? String {
+
+                let latestVersion = tagName.replacingOccurrences(of: "v", with: "")
+
+                await MainActor.run {
+                    self.latestVersion = latestVersion
+                    self.updateAvailable = self.isNewerVersion(latestVersion, than: self.currentVersion)
+                    self.isCheckingForUpdates = false
+
+                    // Store last check time
+                    UserDefaults.standard.set(Date(), forKey: self.lastUpdateCheckKey)
+                }
+            }
+        } catch {
+            await MainActor.run {
+                self.isCheckingForUpdates = false
+                print("Failed to check for updates: \(error)")
+            }
+        }
+    }
+
+    private func isNewerVersion(_ version1: String, than version2: String) -> Bool {
+        let v1Components = version1.components(separatedBy: ".").compactMap { Int($0) }
+        let v2Components = version2.components(separatedBy: ".").compactMap { Int($0) }
+
+        let maxCount = max(v1Components.count, v2Components.count)
+
+        for i in 0..<maxCount {
+            let v1Value = i < v1Components.count ? v1Components[i] : 0
+            let v2Value = i < v2Components.count ? v2Components[i] : 0
+
+            if v1Value > v2Value {
+                return true
+            } else if v1Value < v2Value {
+                return false
+            }
+        }
+
+        return false
+    }
+
+    func shouldCheckForUpdates() -> Bool {
+        guard let lastCheck = UserDefaults.standard.object(forKey: lastUpdateCheckKey) as? Date else {
+            return true
+        }
+        return Date().timeIntervalSince(lastCheck) > updateCheckInterval
+    }
+
+    func openReleasesPage() {
+        if let url = URL(string: "https://github.com/\(githubRepo)/releases") {
+            NSWorkspace.shared.open(url)
+        }
+    }
+
+    func checkForUpdatesManually() async {
+        await checkForUpdates()
+
+        await MainActor.run {
+            if self.updateAvailable {
+                self.successMessage = "Update available! Version \(self.latestVersion ?? "") is now available for download."
+            } else {
+                self.successMessage = "Orchard is up to date. You're running the latest version (\(self.currentVersion))."
+            }
+        }
     }
 
     private func validateBinaryPath(_ path: String) -> Bool {
