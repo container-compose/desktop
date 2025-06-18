@@ -275,7 +275,6 @@ struct ContentView: View {
 
     private var primaryColumnView: some View {
         VStack(spacing: 0) {
-            Divider()
             tabNavigationView
             Divider()
             selectedContentView
@@ -285,17 +284,13 @@ struct ContentView: View {
 
     private var tabNavigationView: some View {
         VStack(spacing: 0) {
-            HStack(spacing: 20) {
+            HStack {
                 ForEach(TabSelection.allCases, id: \.self) { tab in
                     tabButton(for: tab)
                 }
             }
             .padding(.horizontal, 16)
             .padding(.vertical, 8)
-
-            Rectangle()
-                .fill(Color(NSColor.separatorColor))
-                .frame(height: 0.5)
         }
         .transaction { transaction in
             transaction.animation = nil
@@ -336,17 +331,19 @@ struct ContentView: View {
                 listFocusedTab = tab
             }
         }) {
-            HStack(spacing: 6) {
+            HStack {
                 SwiftUI.Image(systemName: tab.icon)
-                    .font(.system(size: 14, weight: .medium))
                 Text(tab.title)
-                    .font(.system(size: 13, weight: .medium))
             }
-            .foregroundColor(selectedTab == tab ? .blue : .secondary)
-            .padding(.horizontal, 8)
-            .padding(.vertical, 4)
+            .padding(.horizontal, 12)
+            .padding(.vertical, 8)
+            .background(
+                selectedTab == tab ? Color.accentColor.opacity(0.2) : Color.clear
+            )
+            .foregroundColor(selectedTab == tab ? .accentColor : .secondary)
+            .cornerRadius(6)
         }
-        .buttonStyle(PlainButtonStyle())
+        .buttonStyle(.plain)
     }
 
 

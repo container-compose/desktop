@@ -437,6 +437,21 @@ struct ContainerDetailView: View {
 struct ContainerImageDetailView: View {
     let image: ContainerImage
     @EnvironmentObject var containerService: ContainerService
+    @State private var selectedTab: ImageTab = .overview
+
+    enum ImageTab: String, CaseIterable {
+        case overview = "Overview"
+        case inUseBy = "In Use By"
+
+        var systemImage: String {
+            switch self {
+            case .overview:
+                return "info.circle"
+            case .inUseBy:
+                return "cube.box"
+            }
+        }
+    }
 
     private var imageName: String {
         let components = image.reference.split(separator: "/")
@@ -467,36 +482,89 @@ struct ContainerImageDetailView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            // Scrollable content
-            ScrollView {
-                VStack(alignment: .leading, spacing: 20) {
-                    HStack(alignment: .top, spacing: 20) {
-                        // Overview section
-                        imageOverviewSection()
+            tabPickerSection
+            tabContentSection
+        }
+    }
 
-                        Divider()
-
-                        // Technical details section
-                        imageTechnicalSection()
-
-                        Divider()
-
-                    }
-
-                    // Containers using this image section
-                    containersUsingImageSection()
-
-                    if let annotations = image.descriptor.annotations, !annotations.isEmpty {
-                        Divider()
-
-                        // Annotations section
-                        imageAnnotationsSection(annotations: annotations)
-                    }
-
-                    Spacer(minLength: 20)
+    private var tabPickerSection: some View {
+        VStack(spacing: 0) {
+            HStack {
+                ForEach(ImageTab.allCases, id: \.self) { tab in
+                    tabButton(for: tab)
                 }
-                .padding()
+                Spacer()
             }
+            .padding(.horizontal)
+            .padding(.vertical, 8)
+
+            Divider()
+        }
+    }
+
+    private func tabButton(for tab: ImageTab) -> some View {
+        Button(action: {
+            selectedTab = tab
+        }) {
+            HStack {
+                SwiftUI.Image(systemName: tab.systemImage)
+                Text(tab.rawValue)
+            }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 8)
+            .background(
+                selectedTab == tab ? Color.accentColor.opacity(0.2) : Color.clear
+            )
+            .foregroundColor(selectedTab == tab ? .accentColor : .secondary)
+            .cornerRadius(6)
+        }
+        .buttonStyle(.plain)
+    }
+
+    private var tabContentSection: some View {
+        ScrollView {
+            Group {
+                switch selectedTab {
+                case .overview:
+                    imageOverviewTab
+                case .inUseBy:
+                    imageInUseByTab
+                }
+            }
+            .padding()
+        }
+    }
+
+    private var imageOverviewTab: some View {
+        VStack(alignment: .leading, spacing: 20) {
+            HStack(alignment: .top, spacing: 20) {
+                // Overview section
+                imageOverviewSection()
+
+                Divider()
+
+                // Technical details section
+                imageTechnicalSection()
+
+                Divider()
+
+            }
+
+            if let annotations = image.descriptor.annotations, !annotations.isEmpty {
+                Divider()
+
+                // Annotations section
+                imageAnnotationsSection(annotations: annotations)
+            }
+
+            Spacer(minLength: 20)
+        }
+    }
+
+    private var imageInUseByTab: some View {
+        VStack(alignment: .leading, spacing: 20) {
+            containersUsingImageSection()
+            Spacer(minLength: 20)
         }
     }
 
@@ -684,6 +752,21 @@ struct ContainerImageUsageRow: View {
 struct MountDetailView: View {
     let mount: ContainerMount
     @EnvironmentObject var containerService: ContainerService
+    @State private var selectedTab: MountTab = .overview
+
+    enum MountTab: String, CaseIterable {
+        case overview = "Overview"
+        case inUseBy = "In Use By"
+
+        var systemImage: String {
+            switch self {
+            case .overview:
+                return "info.circle"
+            case .inUseBy:
+                return "cube.box"
+            }
+        }
+    }
 
     private var containersUsingMount: [Container] {
         containerService.containers.filter { container in
@@ -692,14 +775,73 @@ struct MountDetailView: View {
     }
 
     var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 20) {
-                mountOverviewSection()
-                mountTechnicalSection()
-                containersUsingMountSection()
-            }
+        VStack(alignment: .leading, spacing: 0) {
+            tabPickerSection
+            tabContentSection
         }
-        .padding()
+    }
+
+    private var tabPickerSection: some View {
+        VStack(spacing: 0) {
+            HStack {
+                ForEach(MountTab.allCases, id: \.self) { tab in
+                    tabButton(for: tab)
+                }
+                Spacer()
+            }
+            .padding(.horizontal)
+            .padding(.vertical, 8)
+
+            Divider()
+        }
+    }
+
+    private func tabButton(for tab: MountTab) -> some View {
+        Button(action: {
+            selectedTab = tab
+        }) {
+            HStack {
+                SwiftUI.Image(systemName: tab.systemImage)
+                Text(tab.rawValue)
+            }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 8)
+            .background(
+                selectedTab == tab ? Color.accentColor.opacity(0.2) : Color.clear
+            )
+            .foregroundColor(selectedTab == tab ? .accentColor : .secondary)
+            .cornerRadius(6)
+        }
+        .buttonStyle(.plain)
+    }
+
+    private var tabContentSection: some View {
+        ScrollView {
+            Group {
+                switch selectedTab {
+                case .overview:
+                    mountOverviewTab
+                case .inUseBy:
+                    mountInUseByTab
+                }
+            }
+            .padding()
+        }
+    }
+
+    private var mountOverviewTab: some View {
+        VStack(alignment: .leading, spacing: 20) {
+            mountOverviewSection()
+            mountTechnicalSection()
+            Spacer(minLength: 20)
+        }
+    }
+
+    private var mountInUseByTab: some View {
+        VStack(alignment: .leading, spacing: 20) {
+            containersUsingMountSection()
+            Spacer(minLength: 20)
+        }
     }
 
     private func mountOverviewSection() -> some View {
@@ -729,9 +871,9 @@ struct MountDetailView: View {
 
             VStack(alignment: .leading, spacing: 8) {
                 if mount.mount.type.virtiofs != nil {
-                    InfoRow(label: "Filesystem", value: "VirtioFS - High-performance shared filesystem")
+                    InfoRow(label: "Filesystem", value: "VirtioFS")
                 } else if mount.mount.type.tmpfs != nil {
-                    InfoRow(label: "Filesystem", value: "tmpfs - In-memory temporary filesystem")
+                    InfoRow(label: "Filesystem", value: "tmpfs")
                 } else {
                     InfoRow(label: "Filesystem", value: "Unknown mount type")
                 }
