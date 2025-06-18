@@ -16,37 +16,37 @@
 			containerPortal = C25FE6DF2E00C69400A8CD32 /* Project object */;
 			proxyType = 1;
 			remoteGlobalIDString = C25FE6E62E00C69400A8CD32;
-			remoteInfo = "Container Desktop";
+			remoteInfo = "Orchard";
 		};
 		C25FE7002E00C69500A8CD32 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = C25FE6DF2E00C69400A8CD32 /* Project object */;
 			proxyType = 1;
 			remoteGlobalIDString = C25FE6E62E00C69400A8CD32;
-			remoteInfo = "Container Desktop";
+			remoteInfo = "Orchard";
 		};
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
-		C25FE6E72E00C69400A8CD32 /* Container Desktop.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Container Desktop.app"; sourceTree = BUILT_PRODUCTS_DIR; };
-		C25FE6F52E00C69500A8CD32 /* Container DesktopTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "Container DesktopTests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
-		C25FE6FF2E00C69500A8CD32 /* Container DesktopUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "Container DesktopUITests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
+		C25FE6E72E00C69400A8CD32 /* Orchard.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Orchard.app"; sourceTree = BUILT_PRODUCTS_DIR; };
+		C25FE6F52E00C69500A8CD32 /* OrchardTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "OrchardTests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
+		C25FE6FF2E00C69500A8CD32 /* OrchardUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "OrchardUITests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
-		C25FE6E92E00C69400A8CD32 /* Container Desktop */ = {
+		C25FE6E92E00C69400A8CD32 /* Orchard */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			path = "Container Desktop";
+			path = "Orchard";
 			sourceTree = "<group>";
 		};
-		C25FE6F82E00C69500A8CD32 /* Container DesktopTests */ = {
+		C25FE6F82E00C69500A8CD32 /* OrchardTests */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			path = "Container DesktopTests";
+			path = "OrchardTests";
 			sourceTree = "<group>";
 		};
-		C25FE7022E00C69500A8CD32 /* Container DesktopUITests */ = {
+		C25FE7022E00C69500A8CD32 /* OrchardUITests */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			path = "Container DesktopUITests";
+			path = "OrchardUITests";
 			sourceTree = "<group>";
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */
@@ -80,9 +80,9 @@
 		C25FE6DE2E00C69400A8CD32 = {
 			isa = PBXGroup;
 			children = (
-				C25FE6E92E00C69400A8CD32 /* Container Desktop */,
-				C25FE6F82E00C69500A8CD32 /* Container DesktopTests */,
-				C25FE7022E00C69500A8CD32 /* Container DesktopUITests */,
+				C25FE6E92E00C69400A8CD32 /* Orchard */,
+				C25FE6F82E00C69500A8CD32 /* OrchardTests */,
+				C25FE7022E00C69500A8CD32 /* OrchardUITests */,
 				C25FE6E82E00C69400A8CD32 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -90,9 +90,9 @@
 		C25FE6E82E00C69400A8CD32 /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				C25FE6E72E00C69400A8CD32 /* Container Desktop.app */,
-				C25FE6F52E00C69500A8CD32 /* Container DesktopTests.xctest */,
-				C25FE6FF2E00C69500A8CD32 /* Container DesktopUITests.xctest */,
+				C25FE6E72E00C69400A8CD32 /* Orchard.app */,
+				C25FE6F52E00C69500A8CD32 /* OrchardTests.xctest */,
+				C25FE6FF2E00C69500A8CD32 /* OrchardUITests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -100,9 +100,9 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
-		C25FE6E62E00C69400A8CD32 /* Container Desktop */ = {
+		C25FE6E62E00C69400A8CD32 /* Orchard */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = C25FE7092E00C69500A8CD32 /* Build configuration list for PBXNativeTarget "Container Desktop" */;
+			buildConfigurationList = C25FE7092E00C69500A8CD32 /* Build configuration list for PBXNativeTarget "Orchard" */;
 			buildPhases = (
 				C25FE6E32E00C69400A8CD32 /* Sources */,
 				C25FE6E42E00C69400A8CD32 /* Frameworks */,
@@ -113,19 +113,19 @@
 			dependencies = (
 			);
 			fileSystemSynchronizedGroups = (
-				C25FE6E92E00C69400A8CD32 /* Container Desktop */,
+				C25FE6E92E00C69400A8CD32 /* Orchard */,
 			);
-			name = "Container Desktop";
+			name = "Orchard";
 			packageProductDependencies = (
 				C25FE7362E00CF9B00A8CD32 /* SwiftExec */,
 			);
-			productName = "Container Desktop";
-			productReference = C25FE6E72E00C69400A8CD32 /* Container Desktop.app */;
+			productName = "Orchard";
+			productReference = C25FE6E72E00C69400A8CD32 /* Orchard.app */;
 			productType = "com.apple.product-type.application";
 		};
-		C25FE6F42E00C69500A8CD32 /* Container DesktopTests */ = {
+		C25FE6F42E00C69500A8CD32 /* OrchardTests */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = C25FE70C2E00C69500A8CD32 /* Build configuration list for PBXNativeTarget "Container DesktopTests" */;
+			buildConfigurationList = C25FE70C2E00C69500A8CD32 /* Build configuration list for PBXNativeTarget "OrchardTests" */;
 			buildPhases = (
 				C25FE6F12E00C69500A8CD32 /* Sources */,
 				C25FE6F22E00C69500A8CD32 /* Frameworks */,
@@ -137,18 +137,18 @@
 				C25FE6F72E00C69500A8CD32 /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
-				C25FE6F82E00C69500A8CD32 /* Container DesktopTests */,
+				C25FE6F82E00C69500A8CD32 /* OrchardTests */,
 			);
-			name = "Container DesktopTests";
+			name = "OrchardTests";
 			packageProductDependencies = (
 			);
-			productName = "Container DesktopTests";
-			productReference = C25FE6F52E00C69500A8CD32 /* Container DesktopTests.xctest */;
+			productName = "OrchardTests";
+			productReference = C25FE6F52E00C69500A8CD32 /* OrchardTests.xctest */;
 			productType = "com.apple.product-type.bundle.unit-test";
 		};
-		C25FE6FE2E00C69500A8CD32 /* Container DesktopUITests */ = {
+		C25FE6FE2E00C69500A8CD32 /* OrchardUITests */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = C25FE70F2E00C69500A8CD32 /* Build configuration list for PBXNativeTarget "Container DesktopUITests" */;
+			buildConfigurationList = C25FE70F2E00C69500A8CD32 /* Build configuration list for PBXNativeTarget "OrchardUITests" */;
 			buildPhases = (
 				C25FE6FB2E00C69500A8CD32 /* Sources */,
 				C25FE6FC2E00C69500A8CD32 /* Frameworks */,
@@ -160,13 +160,13 @@
 				C25FE7012E00C69500A8CD32 /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
-				C25FE7022E00C69500A8CD32 /* Container DesktopUITests */,
+				C25FE7022E00C69500A8CD32 /* OrchardUITests */,
 			);
-			name = "Container DesktopUITests";
+			name = "OrchardUITests";
 			packageProductDependencies = (
 			);
-			productName = "Container DesktopUITests";
-			productReference = C25FE6FF2E00C69500A8CD32 /* Container DesktopUITests.xctest */;
+			productName = "OrchardUITests";
+			productReference = C25FE6FF2E00C69500A8CD32 /* OrchardUITests.xctest */;
 			productType = "com.apple.product-type.bundle.ui-testing";
 		};
 /* End PBXNativeTarget section */
@@ -192,7 +192,7 @@
 					};
 				};
 			};
-			buildConfigurationList = C25FE6E22E00C69400A8CD32 /* Build configuration list for PBXProject "Container Desktop" */;
+			buildConfigurationList = C25FE6E22E00C69400A8CD32 /* Build configuration list for PBXProject "Orchard" */;
 			developmentRegion = en;
 			hasScannedForEncodings = 0;
 			knownRegions = (
@@ -209,9 +209,9 @@
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
-				C25FE6E62E00C69400A8CD32 /* Container Desktop */,
-				C25FE6F42E00C69500A8CD32 /* Container DesktopTests */,
-				C25FE6FE2E00C69500A8CD32 /* Container DesktopUITests */,
+				C25FE6E62E00C69400A8CD32 /* Orchard */,
+				C25FE6F42E00C69500A8CD32 /* OrchardTests */,
+				C25FE6FE2E00C69500A8CD32 /* OrchardUITests */,
 			);
 		};
 /* End PBXProject section */
@@ -267,12 +267,12 @@
 /* Begin PBXTargetDependency section */
 		C25FE6F72E00C69500A8CD32 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
-			target = C25FE6E62E00C69400A8CD32 /* Container Desktop */;
+			target = C25FE6E62E00C69400A8CD32 /* Orchard */;
 			targetProxy = C25FE6F62E00C69500A8CD32 /* PBXContainerItemProxy */;
 		};
 		C25FE7012E00C69500A8CD32 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
-			target = C25FE6E62E00C69400A8CD32 /* Container Desktop */;
+			target = C25FE6E62E00C69400A8CD32 /* Orchard */;
 			targetProxy = C25FE7002E00C69500A8CD32 /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
@@ -397,7 +397,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
-				CODE_SIGN_ENTITLEMENTS = "Container Desktop/Container_Desktop.entitlements";
+				CODE_SIGN_ENTITLEMENTS = "Orchard/Orchard.entitlements";
 				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "-";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
@@ -419,7 +419,7 @@
 				"LD_RUNPATH_SEARCH_PATHS[sdk=macosx*]" = "@executable_path/../Frameworks";
 				MACOSX_DEPLOYMENT_TARGET = 15.5;
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = "container-compose.Container-Desktop";
+				PRODUCT_BUNDLE_IDENTIFIER = "container-compose.Orchard";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				REGISTER_APP_GROUPS = YES;
 				SDKROOT = auto;
@@ -436,7 +436,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
-				CODE_SIGN_ENTITLEMENTS = "Container Desktop/Container_Desktop.entitlements";
+				CODE_SIGN_ENTITLEMENTS = "Orchard/Orchard.entitlements";
 				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "-";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
@@ -458,7 +458,7 @@
 				"LD_RUNPATH_SEARCH_PATHS[sdk=macosx*]" = "@executable_path/../Frameworks";
 				MACOSX_DEPLOYMENT_TARGET = 15.5;
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = "container-compose.Container-Desktop";
+				PRODUCT_BUNDLE_IDENTIFIER = "container-compose.Orchard";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				REGISTER_APP_GROUPS = YES;
 				SDKROOT = auto;
@@ -480,14 +480,14 @@
 				IPHONEOS_DEPLOYMENT_TARGET = 18.5;
 				MACOSX_DEPLOYMENT_TARGET = 15.5;
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = "container-compose.Container-DesktopTests";
+				PRODUCT_BUNDLE_IDENTIFIER = "container-compose.OrchardTests";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = auto;
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator macosx xros xrsimulator";
 				SWIFT_EMIT_LOC_STRINGS = NO;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2,7";
-				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Container Desktop.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Container Desktop";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Orchard.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Orchard";
 				XROS_DEPLOYMENT_TARGET = 2.5;
 			};
 			name = Debug;
@@ -502,14 +502,14 @@
 				IPHONEOS_DEPLOYMENT_TARGET = 18.5;
 				MACOSX_DEPLOYMENT_TARGET = 15.5;
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = "container-compose.Container-DesktopTests";
+				PRODUCT_BUNDLE_IDENTIFIER = "container-compose.OrchardTests";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = auto;
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator macosx xros xrsimulator";
 				SWIFT_EMIT_LOC_STRINGS = NO;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2,7";
-				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Container Desktop.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Container Desktop";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Orchard.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Orchard";
 				XROS_DEPLOYMENT_TARGET = 2.5;
 			};
 			name = Release;
@@ -523,14 +523,14 @@
 				IPHONEOS_DEPLOYMENT_TARGET = 18.5;
 				MACOSX_DEPLOYMENT_TARGET = 15.5;
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = "container-compose.Container-DesktopUITests";
+				PRODUCT_BUNDLE_IDENTIFIER = "container-compose.OrchardUITests";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = auto;
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator macosx xros xrsimulator";
 				SWIFT_EMIT_LOC_STRINGS = NO;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2,7";
-				TEST_TARGET_NAME = "Container Desktop";
+				TEST_TARGET_NAME = "Orchard";
 				XROS_DEPLOYMENT_TARGET = 2.5;
 			};
 			name = Debug;
@@ -544,14 +544,14 @@
 				IPHONEOS_DEPLOYMENT_TARGET = 18.5;
 				MACOSX_DEPLOYMENT_TARGET = 15.5;
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = "container-compose.Container-DesktopUITests";
+				PRODUCT_BUNDLE_IDENTIFIER = "container-compose.OrchardUITests";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = auto;
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator macosx xros xrsimulator";
 				SWIFT_EMIT_LOC_STRINGS = NO;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2,7";
-				TEST_TARGET_NAME = "Container Desktop";
+				TEST_TARGET_NAME = "Orchard";
 				XROS_DEPLOYMENT_TARGET = 2.5;
 			};
 			name = Release;
@@ -559,7 +559,7 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
-		C25FE6E22E00C69400A8CD32 /* Build configuration list for PBXProject "Container Desktop" */ = {
+		C25FE6E22E00C69400A8CD32 /* Build configuration list for PBXProject "Orchard" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				C25FE7072E00C69500A8CD32 /* Debug */,
@@ -568,7 +568,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		C25FE7092E00C69500A8CD32 /* Build configuration list for PBXNativeTarget "Container Desktop" */ = {
+		C25FE7092E00C69500A8CD32 /* Build configuration list for PBXNativeTarget "Orchard" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				C25FE70A2E00C69500A8CD32 /* Debug */,
@@ -577,7 +577,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		C25FE70C2E00C69500A8CD32 /* Build configuration list for PBXNativeTarget "Container DesktopTests" */ = {
+		C25FE70C2E00C69500A8CD32 /* Build configuration list for PBXNativeTarget "OrchardTests" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				C25FE70D2E00C69500A8CD32 /* Debug */,
@@ -586,7 +586,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		C25FE70F2E00C69500A8CD32 /* Build configuration list for PBXNativeTarget "Container DesktopUITests" */ = {
+		C25FE70F2E00C69500A8CD32 /* Build configuration list for PBXNativeTarget "OrchardUITests" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				C25FE7102E00C69500A8CD32 /* Debug */,

@@ -1,13 +1,13 @@
 //
-//  Container_DesktopUITestsLaunchTests.swift
-//  Container DesktopUITests
+//  OrchardUITestsLaunchTests.swift
+//  OrchardUITests
 //
 //  Created by Andrew Waters on 16/06/2025.
 //
 
 import XCTest
 
-final class Container_DesktopUITestsLaunchTests: XCTestCase {
+final class OrchardUITestsLaunchTests: XCTestCase {
 
     override class var runsForEachTargetApplicationUIConfiguration: Bool {
         true
