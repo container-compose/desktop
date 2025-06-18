@@ -6,22 +6,26 @@
 //
 
 import SwiftUI
+import AppKit
 
 struct SettingsView: View {
     @EnvironmentObject var containerService: ContainerService
-    @State private var selectedTab: SettingsTab = .dns
+    @State private var selectedTab: SettingsTab = .general
     @State private var showingErrorAlert = false
     @State private var errorMessage = ""
     @State private var showingSuccessAlert = false
     @State private var successMessage = ""
 
     enum SettingsTab: String, CaseIterable {
+        case general = "general"
         case registries = "registries"
         case dns = "dns"
         case kernel = "kernel"
 
         var title: String {
             switch self {
+            case .general:
+                return "General"
             case .registries:
                 return "Registries"
             case .dns:
@@ -33,6 +37,8 @@ struct SettingsView: View {
 
         var icon: String {
             switch self {
+            case .general:
+                return "gearshape"
             case .registries:
                 return "server.rack"
             case .dns:
@@ -45,6 +51,12 @@ struct SettingsView: View {
 
     var body: some View {
         TabView(selection: $selectedTab) {
+            generalView
+                .tabItem {
+                    Label("General", systemImage: "gearshape")
+                }
+                .tag(SettingsTab.general)
+
             registryView
                 .tabItem {
                     Label("Registries", systemImage: "server.rack")
@@ -109,7 +121,158 @@ struct SettingsView: View {
         }
     }
 
+    // MARK: - General View
 
+    private var generalView: some View {
+        VStack(spacing: 20) {
+            VStack(alignment: .leading, spacing: 8) {
+                HStack {
+                    SwiftUI.Image(systemName: "gearshape")
+                        .font(.title2)
+                        .foregroundColor(.blue)
+                    Text("General Settings")
+                        .font(.title2)
+                        .fontWeight(.semibold)
+                }
+
+                Text("Configure general application settings")
+                    .font(.subheadline)
+                    .foregroundColor(.secondary)
+            }
+
+            // Custom Binary Path Section
+            VStack(alignment: .leading, spacing: 12) {
+                HStack {
+                    SwiftUI.Image(systemName: "terminal")
+                        .font(.headline)
+                        .foregroundColor(.secondary)
+                    Text("Container Binary Path")
+                        .font(.headline)
+                        .fontWeight(.medium)
+                }
+
+                Text("Customize the path to the container binary. Leave empty to use the default path.")
+                    .font(.subheadline)
+                    .foregroundColor(.secondary)
+
+                HStack {
+                    TextField("Custom binary path", text: Binding(
+                        get: { containerService.customBinaryPath ?? "" },
+                        set: { _ in }
+                    ))
+                    .textFieldStyle(.roundedBorder)
+                    .disabled(true)
+
+                    Button("Choose Binary...") {
+                        let panel = NSOpenPanel()
+                        panel.allowsMultipleSelection = false
+                        panel.canChooseDirectories = false
+                        panel.canChooseFiles = true
+                        panel.allowedContentTypes = [.unixExecutable, .executable]
+                        panel.title = "Select Container Binary"
+                        panel.message = "Choose the container binary executable"
+
+                        if panel.runModal() == .OK, let url = panel.url {
+                            let path = url.path
+                            if !containerService.validateAndSetCustomBinaryPath(path) {
+                                errorMessage = "Selected file is not a valid executable binary"
+                                showingErrorAlert = true
+                            }
+                        }
+                    }
+                    .buttonStyle(.bordered)
+                    .controlSize(.small)
+
+                    Button("Reset to Default") {
+                        containerService.resetToDefaultBinary()
+                    }
+                    .buttonStyle(.bordered)
+                    .controlSize(.small)
+                }
+
+                HStack {
+                    SwiftUI.Image(systemName: "info.circle")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                    Text("Default: /usr/local/bin/container")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
+
+                if containerService.isUsingCustomBinary {
+                    HStack {
+                        SwiftUI.Image(systemName: "checkmark.circle.fill")
+                            .font(.caption)
+                            .foregroundColor(.green)
+                        Text("Using custom binary: \(containerService.containerBinaryPath)")
+                            .font(.caption)
+                            .foregroundColor(.green)
+                    }
+                } else {
+                    HStack {
+                        SwiftUI.Image(systemName: "circle")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                        Text("Using default binary")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+                }
+            }
+            .padding()
+            .background(Color(NSColor.controlBackgroundColor))
+            .cornerRadius(8)
+
+            // Refresh Interval Section
+            VStack(alignment: .leading, spacing: 12) {
+                HStack {
+                    SwiftUI.Image(systemName: "arrow.clockwise")
+                        .font(.headline)
+                        .foregroundColor(.secondary)
+                    Text("Background Refresh Interval")
+                        .font(.headline)
+                        .fontWeight(.medium)
+                }
+
+                Text("How often the app should refresh container status, registry, and domain information in the background.")
+                    .font(.subheadline)
+                    .foregroundColor(.secondary)
+
+                HStack {
+                    Picker("Refresh Interval", selection: Binding(
+                        get: { containerService.refreshInterval },
+                        set: { newValue in
+                            containerService.setRefreshInterval(newValue)
+                        }
+                    )) {
+                        ForEach(ContainerService.RefreshInterval.allCases, id: \.self) { interval in
+                            Text(interval.displayName).tag(interval)
+                        }
+                    }
+                    .pickerStyle(.menu)
+                    .frame(width: 120)
+
+                    Spacer()
+
+                    HStack {
+                        SwiftUI.Image(systemName: "info.circle")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                        Text("Current: \(containerService.refreshInterval.displayName)")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+                }
+            }
+            .padding()
+            .background(Color(NSColor.controlBackgroundColor))
+            .cornerRadius(8)
+
+            Spacer()
+        }
+        .padding()
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+    }
 
     // MARK: - DNS View
 
