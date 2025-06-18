@@ -103,24 +103,16 @@ struct ContentView: View {
     }
 
     private var mainInterfaceView: some View {
-        Group {
-            if selection == "builders" {
-                // Two-column layout for builders (no middle column)
-                NavigationSplitView {
-                    sidebarView
-                } detail: {
-                    builderDetailView
-                }
-            } else {
-                // Three-column layout for everything else
-                NavigationSplitView {
-                    sidebarView
-                } content: {
-                    contentView
-                } detail: {
-                    detailView
-                }
-            }
+        NavigationSplitView {
+            sidebarView
+                .navigationSplitViewColumnWidth(
+                    min: 250, ideal: 250, max: 250)
+        } content: {
+            contentView
+                .navigationSplitViewColumnWidth(
+                    min: 300, ideal: 300, max: 300)
+        } detail: {
+            detailView
         }
         .task {
             await containerService.checkSystemStatus()
@@ -166,36 +158,31 @@ struct ContentView: View {
                 Text("Mounts")
                     .badge(containerService.allMounts.count)
             }
-            NavigationLink(value: "builders") {
-                HStack {
-                    Text("Builder")
-                    Spacer()
-                    if let builder = containerService.builders.first {
-                        Circle()
-                            .fill(builder.status.lowercased() == "running" ? .green : .gray)
-                            .frame(width: 8, height: 8)
-                    }
-                }
-            }
-            NavigationLink(value: "registry") {
-                Text("Registry")
-            }
+
         }
     }
 
     private var systemStatusSection: some View {
-        VStack(spacing: 12) {
+        VStack {
             HStack {
-                Circle()
-                    .fill(containerService.systemStatus.color)
-                    .frame(width: 12, height: 12)
-                Text("Container \(containerService.systemStatus.text)")
-                    .font(.subheadline)
-                    .foregroundColor(.secondary)
+                HStack {
+                    Circle()
+                        .fill(containerService.systemStatus.color)
+                        .frame(width: 12, height: 12)
+                    Text("Container")
+                }
+
+                Spacer()
+
+                HStack {
+                    Circle()
+                        .fill(containerService.builderStatus.color)
+                        .frame(width: 12, height: 12)
+                    Text("Builder")
+                }
+
                 Spacer()
             }
-            .padding(.horizontal, 8)
-            .padding(.vertical, 4)
         }
         .padding()
     }
@@ -209,10 +196,7 @@ struct ContentView: View {
             imagesList
         case "mounts":
             mountsList
-        case "builders":
-            EmptyView()  // This won't be shown since builders use 2-column layout
-        case "registry":
-            Text("registry list")
+
         case "system":
             Text("system list")
         case .none:
@@ -370,10 +354,7 @@ struct ContentView: View {
             imageDetailView
         case "mounts":
             mountDetailView
-        case "builders":
-            builderDetailView
-        case "registry":
-            Text("registry")
+
         case "system":
             Text("system")
         case .none:
@@ -460,55 +441,7 @@ struct ContentView: View {
         }
     }
 
-    @ViewBuilder
-    private var builderDetailView: some View {
-        if containerService.builders.isEmpty {
-            // No builder exists - show start interface
-            VStack(spacing: 20) {
-                VStack(spacing: 12) {
-                    SwiftUI.Image(systemName: "hammer.fill")
-                        .font(.system(size: 48))
-                        .foregroundColor(.secondary)
 
-                    Text("No Builder Running")
-                        .font(.title2)
-                        .fontWeight(.medium)
-
-                    Text("Start the container builder to build images locally")
-                        .font(.subheadline)
-                        .foregroundColor(.secondary)
-                        .multilineTextAlignment(.center)
-                }
-
-                Button(action: {
-                    Task { @MainActor in
-                        await containerService.startBuilder()
-                    }
-                }) {
-                    HStack {
-                        if containerService.isBuilderLoading {
-                            ProgressView()
-                                .scaleEffect(0.8)
-                                .frame(width: 16, height: 16)
-                        } else {
-                            SwiftUI.Image(systemName: "play.fill")
-                        }
-                        Text("Start Builder")
-                    }
-                    .frame(minWidth: 120)
-                    .padding(.horizontal, 24)
-                    .padding(.vertical, 12)
-                }
-                .buttonStyle(.borderedProminent)
-                .disabled(containerService.isBuilderLoading)
-            }
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .padding()
-        } else if let builder = containerService.builders.first {
-            BuilderDetailView(builder: builder)
-                .environmentObject(containerService)
-        }
-    }
 }
 
 #Preview {

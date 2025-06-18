@@ -11,9 +11,10 @@ class ContainerService: ObservableObject {
     @Published var isBuildersLoading: Bool = false
     @Published var errorMessage: String?
     @Published var systemStatus: SystemStatus = .unknown
-    @Published var isSystemLoading: Bool = false
+    @Published var isSystemLoading = false
     @Published var loadingContainers: Set<String> = []
-    @Published var isBuilderLoading: Bool = false
+    @Published var isBuilderLoading = false
+    @Published var builderStatus: BuilderStatus = .stopped
 
     // Computed property to get all unique mounts from containers
     var allMounts: [ContainerMount] {
@@ -58,6 +59,29 @@ class ContainerService: ObservableObject {
             switch self {
             case .unknown:
                 return "Unknown"
+            case .stopped:
+                return "Stopped"
+            case .running:
+                return "Running"
+            }
+        }
+    }
+
+    enum BuilderStatus {
+        case stopped
+        case running
+
+        var color: Color {
+            switch self {
+            case .stopped:
+                return .gray
+            case .running:
+                return .green
+            }
+        }
+
+        var text: String {
+            switch self {
             case .stopped:
                 return "Stopped"
             case .running:
@@ -167,21 +191,59 @@ class ContainerService: ObservableObject {
 
         do {
             let data = result.stdout?.data(using: .utf8)
-            let newBuilder = try JSONDecoder().decode(
-                Builder.self, from: data!)
 
-            await MainActor.run {
-                withAnimation(.easeInOut(duration: 0.3)) {
-                    self.builders = [newBuilder]
+            // Try to decode as single builder first
+            if let data = data {
+                do {
+                    let newBuilder = try JSONDecoder().decode(Builder.self, from: data)
+                    await MainActor.run {
+                        withAnimation(.easeInOut(duration: 0.3)) {
+                            self.builders = [newBuilder]
+                            // Use the builder's actual status
+                            self.builderStatus = newBuilder.status.lowercased() == "running" ? .running : .stopped
+                        }
+                        self.isBuildersLoading = false
+                    }
+                    print("Builder: \(newBuilder.configuration.id), Status: \(newBuilder.status)")
+                    return
+                } catch {
+                    // If single builder decode fails, try array
+                    do {
+                        let newBuilders = try JSONDecoder().decode([Builder].self, from: data)
+                        await MainActor.run {
+                            withAnimation(.easeInOut(duration: 0.3)) {
+                                self.builders = newBuilders
+                                // Use the first builder's status, or stopped if no builders
+                                if let firstBuilder = newBuilders.first {
+                                    self.builderStatus = firstBuilder.status.lowercased() == "running" ? .running : .stopped
+                                } else {
+                                    self.builderStatus = .stopped
+                                }
+                            }
+                            self.isBuildersLoading = false
+                        }
+                        for builder in newBuilders {
+                            print("Builder: \(builder.configuration.id), Status: \(builder.status)")
+                        }
+                        return
+                    } catch {
+                        print("Failed to decode builders as array: \(error)")
+                    }
                 }
-                self.isBuildersLoading = false
             }
 
-            print("Builder: \(newBuilder.configuration.id), Status: \(newBuilder.status)")
+            // If we get here, decoding failed
+            await MainActor.run {
+                self.builders = []
+                self.builderStatus = .stopped
+                self.isBuildersLoading = false
+            }
+            print("No builder data or failed to decode")
         } catch {
             await MainActor.run {
                 // If no builder exists, set empty array
                 self.builders = []
+                self.builderStatus = .stopped
                 self.isBuildersLoading = false
             }
             print("No builder found or error loading builder: \(error)")

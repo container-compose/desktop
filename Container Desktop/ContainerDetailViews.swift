@@ -795,7 +795,7 @@ struct BuilderDetailView: View {
             }
             .padding()
         }
-        .navigationTitle("Builder Details")
+//        .navigationTitle("Builder Details")
     }
 
     @ViewBuilder
