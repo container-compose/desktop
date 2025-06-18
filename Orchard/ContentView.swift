@@ -18,7 +18,50 @@ struct ContentView: View {
     @State private var showOnlyRunning: Bool = false
     @State private var refreshTimer: Timer?
 
+    // Computed property for current resource title
+    private var currentResourceTitle: String {
+        switch selectedTab {
+        case .containers:
+            if let selectedContainer = selectedContainer {
+                return selectedContainer
+            }
+            return ""
+        case .images:
+            if let selectedImage = selectedImage {
+                // Extract image name from reference for cleaner display
+                let components = selectedImage.split(separator: "/")
+                if let lastComponent = components.last {
+                    return String(lastComponent.split(separator: ":").first ?? lastComponent)
+                }
+                return selectedImage
+            }
+            return ""
+        case .mounts:
+            if let selectedMount = selectedMount,
+               let mount = containerService.allMounts.first(where: { $0.id == selectedMount }) {
+                return URL(fileURLWithPath: mount.mount.source).lastPathComponent
+            }
+            return ""
+        }
+    }
 
+    // Get current container for title bar controls
+    private var currentContainer: Container? {
+        guard selectedTab == .containers, let selectedContainer = selectedContainer else { return nil }
+        return containerService.containers.first { $0.configuration.id == selectedContainer }
+    }
+
+    // Get current image for title bar display
+    private var currentImage: ContainerImage? {
+        guard selectedTab == .images, let selectedImage = selectedImage else { return nil }
+        return containerService.images.first { $0.reference == selectedImage }
+    }
+
+    // Get current mount for title bar display
+    private var currentMount: ContainerMount? {
+        guard selectedTab == .mounts, let selectedMount = selectedMount else { return nil }
+        return containerService.allMounts.first { $0.id == selectedMount }
+    }
 
     enum TabSelection: String, CaseIterable {
         case containers = "containers"
@@ -131,10 +174,74 @@ struct ContentView: View {
         } detail: {
             detailView
         }
+        .navigationTitle(currentResourceTitle)
         .toolbar {
-            ToolbarItem(placement: .primaryAction) {
+            ToolbarItemGroup(placement: .primaryAction) {
+                // Resource-specific controls in title bar
+                if let container = currentContainer {
+                    // Container status
+                    HStack(spacing: 4) {
+                        Circle()
+                            .fill(container.status.lowercased() == "running" ? .green : .gray)
+                            .frame(width: 8, height: 8)
+                        Text(container.status.capitalized)
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+
+                    ContainerControlButton(
+                        container: container,
+                        isLoading: containerService.loadingContainers.contains(
+                            container.configuration.id),
+                        onStart: {
+                            Task { @MainActor in
+                                await containerService.startContainer(container.configuration.id)
+                            }
+                        },
+                        onStop: {
+                            Task { @MainActor in
+                                await containerService.stopContainer(container.configuration.id)
+                            }
+                        }
+                    )
+                    .padding(.horizontal, 16)
+
+                    Spacer()
+                    
+                    HStack(spacing: 8) {
+                        if container.status.lowercased() != "running" {
+                            ContainerRemoveButton(
+                                container: container,
+                                isLoading: containerService.loadingContainers.contains(
+                                    container.configuration.id),
+                                onRemove: {
+                                    Task { @MainActor in
+                                        await containerService.removeContainer(container.configuration.id)
+                                    }
+                                }
+                            )
+                            .padding(.trailing, 32)
+                        }
+                    }
+
+                } else if let image = currentImage {
+
+                    // no real actions or conveniences here yet
+                    
+                } else if let mount = currentMount {
+
+                    Button("Open in Finder") {
+                        let pasteboard = NSPasteboard.general
+                        pasteboard.clearContents()
+                        pasteboard.setString(mount.mount.source, forType: .string)
+                    }
+                    .buttonStyle(.borderless)
+                }
+
+                Spacer()
+                
                 systemStatusView
-                    .padding(.trailing, 8)
+                    .padding(.leading, 8)
             }
         }
         .task {
@@ -331,18 +438,6 @@ struct ContentView: View {
 
     private var imagesList: some View {
         VStack(spacing: 0) {
-            // // Title bar
-            // HStack {
-            //     Text("Available Images")
-            //         .font(.title2)
-            //         .fontWeight(.semibold)
-            //     Spacer()
-            // }
-            // .padding()
-            // .background(Color(.windowBackgroundColor))
-
-            // Divider()
-
             // Images list
             List(selection: $selectedImage) {
                 ForEach(filteredImages, id: \.reference) { image in
