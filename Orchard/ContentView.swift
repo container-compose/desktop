@@ -20,6 +20,11 @@ struct ContentView: View {
     @State private var lastSelectedImage: String?
     @State private var lastSelectedMount: String?
 
+    // Remember last selected detail tabs for each resource type
+    @State private var lastSelectedContainerTab: String = "Overview"
+    @State private var lastSelectedImageTab: String = "Overview"
+    @State private var lastSelectedMountTab: String = "Overview"
+
     @State private var searchText: String = ""
     @State private var showOnlyRunning: Bool = false
     @State private var refreshTimer: Timer?
@@ -856,8 +861,14 @@ struct ContentView: View {
     private var containerDetailView: some View {
         ForEach(containerService.containers, id: \.configuration.id) { container in
             if selectedContainer == container.configuration.id {
-                ContainerDetailView(container: container)
-                    .environmentObject(containerService)
+                ContainerDetailView(
+                    container: container,
+                    initialSelectedTab: lastSelectedContainerTab,
+                    onTabChanged: { newTab in
+                        lastSelectedContainerTab = newTab
+                    }
+                )
+                .environmentObject(containerService)
             }
         }
     }
@@ -866,8 +877,14 @@ struct ContentView: View {
     private var imageDetailView: some View {
         ForEach(containerService.images, id: \.reference) { image in
             if selectedImage == image.reference {
-                ContainerImageDetailView(image: image)
-                    .environmentObject(containerService)
+                ContainerImageDetailView(
+                    image: image,
+                    initialSelectedTab: lastSelectedImageTab,
+                    onTabChanged: { newTab in
+                        lastSelectedImageTab = newTab
+                    }
+                )
+                .environmentObject(containerService)
             }
         }
     }
@@ -943,8 +960,14 @@ struct ContentView: View {
     private var mountDetailView: some View {
         ForEach(containerService.allMounts, id: \.id) { mount in
             if selectedMount == mount.id {
-                MountDetailView(mount: mount)
-                    .environmentObject(containerService)
+                MountDetailView(
+                    mount: mount,
+                    initialSelectedTab: lastSelectedMountTab,
+                    onTabChanged: { newTab in
+                        lastSelectedMountTab = newTab
+                    }
+                )
+                .environmentObject(containerService)
             }
         }
     }

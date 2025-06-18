@@ -5,6 +5,8 @@ import SwiftUI
 
 struct ContainerDetailView: View {
     let container: Container
+    let initialSelectedTab: String
+    let onTabChanged: (String) -> Void
     @EnvironmentObject var containerService: ContainerService
     @State private var selectedTab: ContainerTab = .overview
 
@@ -36,6 +38,9 @@ struct ContainerDetailView: View {
             tabPickerSection
             tabContentSection
         }
+        .onAppear {
+            selectedTab = tabFromString(initialSelectedTab)
+        }
     }
 
     private var tabPickerSection: some View {
@@ -56,6 +61,7 @@ struct ContainerDetailView: View {
     private func tabButton(for tab: ContainerTab) -> some View {
         Button(action: {
             selectedTab = tab
+            onTabChanged(tab.rawValue)
         }) {
             HStack {
                 SwiftUI.Image(systemName: tab.systemImage)
@@ -430,12 +436,19 @@ struct ContainerDetailView: View {
             }
         }
     }
+
+    // Helper function to convert string to enum
+    private func tabFromString(_ tabString: String) -> ContainerTab {
+        return ContainerTab.allCases.first { $0.rawValue == tabString } ?? .overview
+    }
 }
 
 // MARK: - Container Image Detail View
 
 struct ContainerImageDetailView: View {
     let image: ContainerImage
+    let initialSelectedTab: String
+    let onTabChanged: (String) -> Void
     @EnvironmentObject var containerService: ContainerService
     @State private var selectedTab: ImageTab = .overview
 
@@ -485,6 +498,14 @@ struct ContainerImageDetailView: View {
             tabPickerSection
             tabContentSection
         }
+        .onAppear {
+            selectedTab = imageTabFromString(initialSelectedTab)
+        }
+    }
+
+    // Helper function to convert string to enum
+    private func imageTabFromString(_ tabString: String) -> ImageTab {
+        return ImageTab.allCases.first { $0.rawValue == tabString } ?? .overview
     }
 
     private var tabPickerSection: some View {
@@ -505,6 +526,7 @@ struct ContainerImageDetailView: View {
     private func tabButton(for tab: ImageTab) -> some View {
         Button(action: {
             selectedTab = tab
+            onTabChanged(tab.rawValue)
         }) {
             HStack {
                 SwiftUI.Image(systemName: tab.systemImage)
@@ -751,6 +773,8 @@ struct ContainerImageUsageRow: View {
 
 struct MountDetailView: View {
     let mount: ContainerMount
+    let initialSelectedTab: String
+    let onTabChanged: (String) -> Void
     @EnvironmentObject var containerService: ContainerService
     @State private var selectedTab: MountTab = .overview
 
@@ -779,6 +803,14 @@ struct MountDetailView: View {
             tabPickerSection
             tabContentSection
         }
+        .onAppear {
+            selectedTab = mountTabFromString(initialSelectedTab)
+        }
+    }
+
+    // Helper function to convert string to enum
+    private func mountTabFromString(_ tabString: String) -> MountTab {
+        return MountTab.allCases.first { $0.rawValue == tabString } ?? .overview
     }
 
     private var tabPickerSection: some View {
@@ -799,6 +831,7 @@ struct MountDetailView: View {
     private func tabButton(for tab: MountTab) -> some View {
         Button(action: {
             selectedTab = tab
+            onTabChanged(tab.rawValue)
         }) {
             HStack {
                 SwiftUI.Image(systemName: tab.systemImage)
