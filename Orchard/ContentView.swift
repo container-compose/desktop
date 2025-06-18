@@ -182,21 +182,31 @@ struct ContentView: View {
         } detail: {
             detailView
         }
-        .navigationTitle(currentResourceTitle)
+        .navigationTitle("")
         .toolbar {
             ToolbarItemGroup(placement: .navigation) {
-                // Resource-specific controls in title bar
-                if let container = currentContainer {
-                    // Container status
-                    HStack(spacing: 4) {
-                        Circle()
-                            .fill(container.status.lowercased() == "running" ? .green : .gray)
-                            .frame(width: 8, height: 8)
-                        Text(container.status.capitalized)
+                // Xcode-style breadcrumb navigation
+                HStack(spacing: 4) {
+                    // Current tab
+                    Button(selectedTab.title) {
+                        // Could show tab picker if needed
+                    }
+                    .buttonStyle(.plain)
+                    .foregroundColor(.secondary)
+
+                    if !currentResourceTitle.isEmpty {
+                        SwiftUI.Image(systemName: "chevron.right")
                             .font(.caption)
                             .foregroundColor(.secondary)
-                    }
 
+                        // Current resource
+                        Text(currentResourceTitle)
+                            .fontWeight(.medium)
+                            .foregroundColor(.primary)
+                    }
+                }
+
+                if let container = currentContainer {
                     ContainerControlButton(
                         container: container,
                         isLoading: containerService.loadingContainers.contains(
@@ -212,21 +222,18 @@ struct ContentView: View {
                             }
                         }
                     )
-                    .padding(.horizontal, 16)
 
-                    HStack(spacing: 8) {
-                        if container.status.lowercased() != "running" {
-                            ContainerRemoveButton(
-                                container: container,
-                                isLoading: containerService.loadingContainers.contains(
-                                    container.configuration.id),
-                                onRemove: {
-                                    Task { @MainActor in
-                                        await containerService.removeContainer(container.configuration.id)
-                                    }
+                    if container.status.lowercased() != "running" {
+                        ContainerRemoveButton(
+                            container: container,
+                            isLoading: containerService.loadingContainers.contains(
+                                container.configuration.id),
+                            onRemove: {
+                                Task { @MainActor in
+                                    await containerService.removeContainer(container.configuration.id)
                                 }
-                            )
-                        }
+                            }
+                        )
                     }
 
                 } else if let image = currentImage {
@@ -244,7 +251,6 @@ struct ContentView: View {
                     .buttonStyle(.borderless)
                     .help("Open in Finder")
                 }
-
             }
 
             ToolbarItemGroup(placement: .primaryAction) {
