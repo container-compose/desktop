@@ -15,15 +15,15 @@ struct ContentView: View {
     @State private var selectedImage: String?
     @State private var selectedMount: String?
 
-    // Remember last selections for each tab
+    // Last selected items to restore state
     @State private var lastSelectedContainer: String?
     @State private var lastSelectedImage: String?
     @State private var lastSelectedMount: String?
 
-    // Remember last selected detail tabs for each resource type
-    @State private var lastSelectedContainerTab: String = "Overview"
-    @State private var lastSelectedImageTab: String = "Overview"
-    @State private var lastSelectedMountTab: String = "Overview"
+    // Last selected tabs for each section
+    @State private var lastSelectedContainerTab: String = "overview"
+    @State private var lastSelectedImageTab: String = "overview"
+    @State private var lastSelectedMountTab: String = "overview"
 
     @State private var searchText: String = ""
     @State private var showOnlyRunning: Bool = false
@@ -33,6 +33,7 @@ struct ContentView: View {
     @FocusState private var listFocusedTab: TabSelection?
     @State private var showingTabSwitcherPopover = false
     @State private var showingItemNavigatorPopover = false
+    @Environment(\.openWindow) private var openWindow
 
     // Computed property for current resource title
     private var currentResourceTitle: String {
@@ -272,8 +273,10 @@ struct ContentView: View {
                 }
             }
 
-            AppFooter()
-                .environmentObject(containerService)
+            AppFooter(onOpenSettings: {
+                openWindow(id: "settings")
+            })
+            .environmentObject(containerService)
         }
         .task {
             await containerService.checkSystemStatus()

@@ -528,24 +528,14 @@ struct CopyButton: View {
 
 struct AppFooter: View {
     @EnvironmentObject var containerService: ContainerService
+    let onOpenSettings: () -> Void
 
-    private var combinedSystemStatusColor: Color {
-        let systemRunning = containerService.systemStatus == .running
-        let builderRunning = containerService.builderStatus == .running
-
-        if systemRunning && builderRunning {
-            return .green
-        } else if systemRunning && !builderRunning {
-            return .orange
-        } else {
-            return .red
-        }
+    private var containerSystemStatusColor: Color {
+        return containerService.systemStatus.color
     }
 
-    private var combinedSystemStatusText: String {
-        let systemText = containerService.systemStatus.text
-        let builderText = containerService.builderStatus.text
-        return "Container System: \(systemText)\nBuilder: \(builderText)"
+    private var builderStatusColor: Color {
+        return containerService.builderStatus.color
     }
 
     var body: some View {
@@ -557,46 +547,74 @@ struct AppFooter: View {
                     SwiftUI.Image(systemName: "externaldrive.connected.to.line.below")
                         .font(.system(size: 11))
                         .foregroundColor(.secondary)
-                    Text("Registry: \(containerService.defaultRegistry ?? "None")")
+                    Text(containerService.defaultRegistry ?? "None")
                         .font(.system(size: 11))
                         .foregroundColor(.secondary)
                 }
+                .help("Default Registry: \(containerService.defaultRegistry ?? "None")")
 
                 // Default Domain
                 HStack(spacing: 4) {
                     SwiftUI.Image(systemName: "globe")
                         .font(.system(size: 11))
                         .foregroundColor(.secondary)
-                    Text("Domain: \(containerService.currentDefaultDomain ?? "None")")
+                    Text(containerService.currentDefaultDomain ?? "None")
                         .font(.system(size: 11))
                         .foregroundColor(.secondary)
                 }
+                .help("Default Domain: \(containerService.currentDefaultDomain ?? "None")")
 
                 // Binary Status
                 HStack(spacing: 4) {
                     SwiftUI.Image(systemName: containerService.isUsingCustomBinary ? "terminal.fill" : "terminal")
                         .font(.system(size: 11))
                         .foregroundColor(containerService.isUsingCustomBinary ? .blue : .secondary)
-                    Text(containerService.isUsingCustomBinary ? "Custom Binary" : "Default Binary")
+                    Text(containerService.isUsingCustomBinary ? "Custom" : "Default")
                         .font(.system(size: 11))
                         .foregroundColor(containerService.isUsingCustomBinary ? .blue : .secondary)
                 }
+                .help("Binary Path: \(containerService.isUsingCustomBinary ? "Custom" : "Default") (\(containerService.containerBinaryPath))")
             }
 
             Spacer()
 
-            // Right side - System Status
-            HStack(spacing: 6) {
-                SwiftUI.Image(systemName: "button.programmable")
-                    .foregroundColor(combinedSystemStatusColor)
-                    .font(.system(size: 12))
+            // Right side - Separate System and Builder Status
+            HStack(spacing: 12) {
+                // Container System Status
+                HStack(spacing: 4) {
+                    SwiftUI.Image(systemName: "cube.box")
+                        .foregroundColor(.secondary)
+                        .font(.system(size: 12))
 
-                Text(combinedSystemStatusText)
-                    .font(.system(size: 11))
-                    .foregroundColor(.secondary)
-                    .lineLimit(1)
+                    Text(containerService.systemStatus.text)
+                        .font(.system(size: 11))
+                        .foregroundColor(.secondary)
+                }
+                .help("Container System: \(containerService.systemStatus.text)")
+
+                // Builder Status
+                HStack(spacing: 4) {
+                    SwiftUI.Image(systemName: "hammer")
+                        .foregroundColor(.secondary)
+                        .font(.system(size: 12))
+
+                    Text(containerService.builderStatus.text)
+                        .font(.system(size: 11))
+                        .foregroundColor(.secondary)
+                }
+                .help("Builder: \(containerService.builderStatus.text)")
+
+                // Settings Icon
+                Button(action: {
+                    onOpenSettings()
+                }) {
+                    SwiftUI.Image(systemName: "gearshape")
+                        .foregroundColor(.secondary)
+                        .font(.system(size: 12))
+                }
+                .buttonStyle(.plain)
+                .help("Open Settings")
             }
-            .help(combinedSystemStatusText)
             .transaction { transaction in
                 transaction.animation = nil
             }
