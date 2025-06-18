@@ -634,10 +634,6 @@ struct ContainerImageDetailView: View {
 
     private func containersUsingImageSection() -> some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("Used By Containers")
-                .font(.headline)
-                .foregroundColor(.primary)
-
             if containersUsingImage.isEmpty {
                 Text("No containers are currently using this image")
                     .foregroundColor(.secondary)
@@ -933,10 +929,6 @@ struct MountDetailView: View {
 
     private func containersUsingMountSection() -> some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("Containers Using This Mount")
-                .font(.headline)
-                .foregroundColor(.primary)
-
             if containersUsingMount.isEmpty {
                 Text("No containers are currently using this mount")
                     .foregroundColor(.secondary)

@@ -5,6 +5,7 @@ import SwiftUI
 
 struct ContainerImageRow: View {
     let image: ContainerImage
+    @EnvironmentObject var containerService: ContainerService
 
     private var imageName: String {
         // Extract the image name from the reference (e.g., "docker.io/library/alpine:3" -> "alpine")
@@ -25,16 +26,24 @@ struct ContainerImageRow: View {
         return "latest"
     }
 
+    private var isUsedByRunningContainer: Bool {
+        containerService.containers.contains { container in
+            container.configuration.image.reference == image.reference &&
+            container.status.lowercased() == "running"
+        }
+    }
+
     var body: some View {
         NavigationLink(value: image.reference) {
             HStack {
                 SwiftUI.Image(systemName: "square.stack.3d.up")
-                    .foregroundColor(.green)
+                    .foregroundColor(isUsedByRunningContainer ? .green : .gray)
                     .frame(width: 16, height: 16)
 
                 VStack(alignment: .leading) {
                     Text(imageName)
                         .font(.headline)
+                        .foregroundColor(isUsedByRunningContainer ? .primary : .secondary)
                     HStack {
                         Text(imageTag)
                             .font(.subheadline)
@@ -72,6 +81,7 @@ struct ContainerImageRow: View {
 
 struct MountRow: View {
     let mount: ContainerMount
+    @EnvironmentObject var containerService: ContainerService
 
     private var displaySource: String {
         // Show just the last component of the path for cleaner display
@@ -83,11 +93,18 @@ struct MountRow: View {
         URL(fileURLWithPath: mount.mount.destination).lastPathComponent
     }
 
+    private var isUsedByRunningContainer: Bool {
+        containerService.containers.contains { container in
+            mount.containerIds.contains(container.configuration.id) &&
+            container.status.lowercased() == "running"
+        }
+    }
+
     var body: some View {
         NavigationLink(value: mount.id) {
             HStack {
                 SwiftUI.Image(systemName: mount.mount.type.virtiofs != nil ? "externaldrive" : "folder")
-                    .foregroundColor(.blue)
+                    .foregroundColor(isUsedByRunningContainer ? .blue : .gray)
                     .frame(width: 16, height: 16)
                     .padding(.trailing, 8)
 
@@ -95,6 +112,7 @@ struct MountRow: View {
                     HStack {
                         Text(displaySource)
                             .font(.headline)
+                            .foregroundColor(isUsedByRunningContainer ? .primary : .secondary)
                         SwiftUI.Image(systemName: "arrow.right")
                             .font(.caption)
                             .foregroundColor(.secondary)
@@ -147,10 +165,9 @@ struct ContainerRow: View {
     var body: some View {
         NavigationLink(value: container.configuration.id) {
             HStack {
-                Circle()
-                    .fill(container.status.lowercased() == "running" ? .green : .gray)
-                    .frame(width: 8, height: 8)
-                    .padding(.trailing, 8)
+                SwiftUI.Image(systemName: "cube.box")
+                    .foregroundColor(container.status.lowercased() == "running" ? .green : .gray)
+                    .frame(width: 16, height: 16)
 
                 VStack(alignment: .leading) {
                     Text(container.configuration.id)
