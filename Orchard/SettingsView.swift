@@ -19,7 +19,6 @@ struct SettingsView: View {
         case registries = "registries"
         case dns = "dns"
         case kernel = "kernel"
-        case builder = "builder"
 
         var title: String {
             switch self {
@@ -29,28 +28,24 @@ struct SettingsView: View {
                 return "DNS"
             case .kernel:
                 return "Kernel"
-            case .builder:
-                return "Builder"
             }
         }
 
         var icon: String {
             switch self {
             case .registries:
-                return "tray.fill"
+                return "server.rack"
             case .dns:
                 return "network"
             case .kernel:
                 return "cpu"
-            case .builder:
-                return "hammer"
             }
         }
     }
 
     var body: some View {
         TabView(selection: $selectedTab) {
-            registriesView
+            registryView
                 .tabItem {
                     Label("Registries", systemImage: "server.rack")
                 }
@@ -67,28 +62,25 @@ struct SettingsView: View {
                     Label("Kernel", systemImage: "cpu")
                 }
                 .tag(SettingsTab.kernel)
-
-            builderView
-                .tabItem {
-                    Label("Builder", systemImage: "hammer")
-                }
-                .tag(SettingsTab.builder)
         }
         .frame(width: 600, height: 500)
         .task {
             await containerService.loadDNSDomains()
             await containerService.loadKernelConfig()
+            await containerService.loadRegistries()
         }
         .onAppear {
             Task {
                 await containerService.loadDNSDomains()
                 await containerService.loadKernelConfig()
+                await containerService.loadRegistries()
             }
         }
         .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in
             Task {
                 await containerService.loadDNSDomains()
                 await containerService.loadKernelConfig()
+                await containerService.loadRegistries()
             }
         }
         .alert("Error", isPresented: $showingErrorAlert) {
@@ -117,56 +109,7 @@ struct SettingsView: View {
         }
     }
 
-    // MARK: - Registries View
 
-    private var registriesView: some View {
-        VStack(spacing: 20) {
-            VStack(alignment: .leading, spacing: 8) {
-                HStack {
-                    SwiftUI.Image(systemName: "server.rack")
-                        .font(.title2)
-                        .foregroundColor(.blue)
-                    Text("Container Registries")
-                        .font(.title2)
-                        .fontWeight(.semibold)
-                }
-
-                Text("Manage container image registries and authentication settings")
-                    .font(.subheadline)
-                    .foregroundColor(.secondary)
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
-
-            Divider()
-
-            VStack(spacing: 16) {
-                SwiftUI.Image(systemName: "server.rack")
-                    .font(.system(size: 48))
-                    .foregroundColor(.secondary)
-
-                Text("Registry Management")
-                    .font(.headline)
-                    .foregroundColor(.secondary)
-
-                Text("Configure container image registries and authentication")
-                    .font(.subheadline)
-                    .foregroundColor(.secondary)
-                    .multilineTextAlignment(.center)
-
-                Text("Coming Soon")
-                    .font(.caption)
-                    .foregroundColor(Color.secondary.opacity(0.7))
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 4)
-                    .background(Color.secondary.opacity(0.1))
-                    .cornerRadius(8)
-            }
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
-
-            Spacer()
-        }
-        .padding(20)
-    }
 
     // MARK: - DNS View
 
@@ -445,21 +388,30 @@ struct SettingsView: View {
         .padding(20)
     }
 
-    // MARK: - Builder View
+    // MARK: - Registry View
 
-    private var builderView: some View {
+    private var registryView: some View {
         VStack(spacing: 20) {
             VStack(alignment: .leading, spacing: 8) {
                 HStack {
-                    SwiftUI.Image(systemName: "hammer")
+                    SwiftUI.Image(systemName: "server.rack")
                         .font(.title2)
-                        .foregroundColor(.orange)
-                    Text("Container Builder")
+                        .foregroundColor(.blue)
+                    Text("Container Registries")
                         .font(.title2)
                         .fontWeight(.semibold)
+
+                    Spacer()
+
+                    Button(action: {
+                        showRegistryLoginDialog()
+                    }) {
+                        Label("Add Registry", systemImage: "plus")
+                    }
+                    .buttonStyle(.borderedProminent)
                 }
 
-                Text("Manage container build settings and environments")
+                Text("Manage container registry logins and default registry")
                     .font(.subheadline)
                     .foregroundColor(.secondary)
             }
@@ -467,33 +419,130 @@ struct SettingsView: View {
 
             Divider()
 
-            VStack(spacing: 16) {
-                SwiftUI.Image(systemName: "hammer")
-                    .font(.system(size: 48))
-                    .foregroundColor(.secondary)
+            if containerService.isRegistriesLoading {
+                VStack {
+                    ProgressView()
+                        .scaleEffect(0.8)
+                    Text("Loading registries...")
+                        .font(.subheadline)
+                        .foregroundColor(.secondary)
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+            } else if containerService.registries.isEmpty {
+                VStack(spacing: 16) {
+                    SwiftUI.Image(systemName: "server.rack")
+                        .font(.system(size: 48))
+                        .foregroundColor(.secondary)
 
-                Text("Builder Configuration")
-                    .font(.headline)
-                    .foregroundColor(.secondary)
+                    Text("No Registries")
+                        .font(.headline)
+                        .foregroundColor(.secondary)
 
-                Text("Configure container build settings and environments")
-                    .font(.subheadline)
-                    .foregroundColor(.secondary)
-                    .multilineTextAlignment(.center)
+                    Text("Add a registry login to pull images from private repositories.")
+                        .font(.subheadline)
+                        .foregroundColor(.secondary)
+                        .multilineTextAlignment(.center)
 
-                Text("Coming Soon")
-                    .font(.caption)
-                    .foregroundColor(Color.secondary.opacity(0.7))
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 4)
-                    .background(Color.secondary.opacity(0.1))
-                    .cornerRadius(8)
+                    Button("Add Registry") {
+                        showRegistryLoginDialog()
+                    }
+                    .buttonStyle(.borderedProminent)
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+            } else {
+                ScrollView {
+                    LazyVStack(spacing: 8) {
+                        ForEach(containerService.registries) { registry in
+                            registryRow(registry: registry)
+                        }
+                    }
+                    .padding(.vertical, 8)
+                }
             }
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
 
             Spacer()
         }
         .padding(20)
+    }
+
+    private func registryRow(registry: Registry) -> some View {
+        HStack {
+            HStack(spacing: 12) {
+                // Default indicator icon
+                if registry.isDefault {
+                    SwiftUI.Image(systemName: "checkmark.circle.fill")
+                        .font(.system(size: 16))
+                        .foregroundColor(.blue)
+                } else {
+                    SwiftUI.Image(systemName: "circle")
+                        .font(.system(size: 16))
+                        .foregroundColor(.secondary)
+                }
+
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(registry.server)
+                        .font(.system(.body, design: .monospaced))
+                        .fontWeight(registry.isDefault ? .semibold : .medium)
+
+                    if let username = registry.username {
+                        Text("User: \(username)")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+
+                    if registry.isDefault {
+                        Text("Default Registry")
+                            .font(.caption)
+                            .foregroundColor(.blue)
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 2)
+                            .background(Color.blue.opacity(0.15))
+                            .cornerRadius(4)
+                    }
+                }
+            }
+
+            Spacer()
+
+            HStack(spacing: 8) {
+                if registry.isDefault {
+                    Button("Unset Default") {
+                        Task {
+                            await containerService.unsetDefaultRegistry()
+                        }
+                    }
+                    .buttonStyle(.bordered)
+                    .controlSize(.small)
+                    .foregroundColor(.orange)
+                    .disabled(containerService.isRegistriesLoading)
+                } else {
+                    Button("Set Default") {
+                        Task {
+                            await containerService.setDefaultRegistry(registry.server)
+                        }
+                    }
+                    .buttonStyle(.bordered)
+                    .controlSize(.small)
+                    .disabled(containerService.isRegistriesLoading)
+                }
+
+                Button("Logout") {
+                    showRegistryLogoutDialog(registry: registry.server)
+                }
+                .buttonStyle(.bordered)
+                .controlSize(.small)
+                .foregroundColor(.red)
+                .disabled(containerService.isRegistriesLoading)
+            }
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 12)
+        .background(Color(NSColor.controlBackgroundColor))
+        .cornerRadius(8)
+        .overlay(
+            RoundedRectangle(cornerRadius: 8)
+                .stroke(registry.isDefault ? Color.blue.opacity(0.3) : Color.clear, lineWidth: 1)
+        )
     }
 
     // MARK: - Helper Methods
@@ -612,6 +661,88 @@ struct SettingsView: View {
                     tar: tar.isEmpty ? nil : tar,
                     arch: arch
                 )
+            }
+        }
+    }
+
+    private func showRegistryLoginDialog() {
+        let alert = NSAlert()
+        alert.messageText = "Registry Login"
+        alert.informativeText = "Login to a container registry to access private repositories."
+        alert.alertStyle = .informational
+
+        // Create a custom view for the dialog
+        let containerView = NSView(frame: NSRect(x: 0, y: 0, width: 400, height: 140))
+
+        // Server field
+        let serverLabel = NSTextField(labelWithString: "Registry Server:")
+        serverLabel.frame = NSRect(x: 0, y: 115, width: 120, height: 20)
+        let serverField = NSTextField(frame: NSRect(x: 0, y: 95, width: 400, height: 24))
+        serverField.placeholderString = "docker.io, ghcr.io, registry.example.com"
+
+        // Username field
+        let usernameLabel = NSTextField(labelWithString: "Username:")
+        usernameLabel.frame = NSRect(x: 0, y: 70, width: 120, height: 20)
+        let usernameField = NSTextField(frame: NSRect(x: 0, y: 50, width: 400, height: 24))
+        usernameField.placeholderString = "your-username"
+
+        // Password field
+        let passwordLabel = NSTextField(labelWithString: "Password:")
+        passwordLabel.frame = NSRect(x: 0, y: 25, width: 120, height: 20)
+        let passwordField = NSSecureTextField(frame: NSRect(x: 0, y: 5, width: 400, height: 24))
+        passwordField.placeholderString = "your-password or token"
+
+        containerView.addSubview(serverLabel)
+        containerView.addSubview(serverField)
+        containerView.addSubview(usernameLabel)
+        containerView.addSubview(usernameField)
+        containerView.addSubview(passwordLabel)
+        containerView.addSubview(passwordField)
+
+        alert.accessoryView = containerView
+        alert.addButton(withTitle: "Login")
+        alert.addButton(withTitle: "Cancel")
+
+        let response = alert.runModal()
+
+        if response == .alertFirstButtonReturn {
+            let server = serverField.stringValue.trimmingCharacters(in: .whitespaces)
+            let username = usernameField.stringValue.trimmingCharacters(in: .whitespaces)
+            let password = passwordField.stringValue
+
+            if server.isEmpty || username.isEmpty || password.isEmpty {
+                errorMessage = "Please fill in all fields."
+                showingErrorAlert = true
+                return
+            }
+
+            let request = RegistryLoginRequest(
+                server: server,
+                username: username,
+                password: password,
+                scheme: .auto
+            )
+
+            Task {
+                await containerService.loginToRegistry(request)
+            }
+        }
+    }
+
+    private func showRegistryLogoutDialog(registry: String) {
+        let alert = NSAlert()
+        alert.messageText = "Registry Logout"
+        alert.informativeText = "Are you sure you want to logout from '\(registry)'? You will need to login again to access private repositories."
+        alert.alertStyle = .warning
+
+        alert.addButton(withTitle: "Logout")
+        alert.addButton(withTitle: "Cancel")
+
+        let response = alert.runModal()
+
+        if response == .alertFirstButtonReturn {
+            Task {
+                await containerService.logoutFromRegistry(registry)
             }
         }
     }
