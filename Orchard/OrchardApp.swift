@@ -16,6 +16,7 @@ struct OrchardApp: App {
         WindowGroup {
             ContentView()
                 .environmentObject(containerService)
+
         }
         .windowToolbarStyle(.unifiedCompact)
 
