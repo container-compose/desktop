@@ -13,7 +13,7 @@ struct OrchardApp: App {
     @StateObject private var menuBarManager = MenuBarManager()
 
     var body: some Scene {
-        WindowGroup {
+        WindowGroup(id: "main") {
             ContentView()
                 .environmentObject(containerService)
 
@@ -24,6 +24,13 @@ struct OrchardApp: App {
             SettingsView()
                 .environmentObject(containerService)
         }
+
+        WindowGroup(id: "settings") {
+            SettingsView()
+                .environmentObject(containerService)
+        }
+        .windowStyle(.hiddenTitleBar)
+        .windowResizability(.contentSize)
 
         MenuBarExtra("Orchard", systemImage: "cube.box") {
             MenuBarView()
@@ -39,6 +46,7 @@ class MenuBarManager: ObservableObject {
 struct MenuBarView: View {
     @EnvironmentObject var containerService: ContainerService
     @State private var refreshTimer: Timer?
+    @Environment(\.openWindow) private var openWindow
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -147,6 +155,13 @@ struct MenuBarView: View {
                 }
             }
             .disabled(containerService.isSystemLoading || containerService.systemStatus == .stopped)
+
+            Divider()
+
+            Button("Open Main Window") {
+                openWindow(id: "main")
+                NSApplication.shared.activate(ignoringOtherApps: true)
+            }
 
             Button("Quit Orchard") {
                 NSApplication.shared.terminate(nil)
