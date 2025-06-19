@@ -21,10 +21,9 @@ Both projects are new - the tech has only been available for a week! So there is
 
 ## Requirements
 
-- **macOS 15.0 (Ventura)** or later
-- **Apple Silicon (M1/M2/M3)** or Intel Mac with virtualization support
+> `container` relies on the new features and enhancements present in the macOS 26 beta. You can run the tool on macOS 15, but the container maintainers typically will not address issues discovered on macOS 15 that cannot be reproduced on the macOS 26 beta.
 
-> **Note:** Full functionality requires **macOS 26 (Tahoe) Beta** or later. Limited functionality available on macOS 15.
+https://github.com/apple/container?tab=readme-ov-file#requirements
 
 ## Installation
 
