@@ -6,7 +6,7 @@ It has been based on years of experience with Docker Desktop, but dedicated to t
 
 The ambition of the project is to allow it easy for developers to switch from Docker Desktop to Containers. Orchard gives you a desktop experience that complements the (`container ...`) command-line interface.
 
-![overview video](assets/overview.gif)
+![container overview screen](assets/overview.png)
 
 In addition, there is a companion side project ([cli](https://github.com/container-compose/cli) which aims to provide the same ergonomics as `docker compose` that interacts with containers and can use your existing docker compose files.
 
