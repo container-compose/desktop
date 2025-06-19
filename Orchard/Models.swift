@@ -25,6 +25,7 @@ struct ContainerConfiguration: Codable, Equatable {
     let rosetta: Bool
     let dns: DNS
     let resources: Resources
+    let labels: [String: String]?
 
     enum CodingKeys: String, CodingKey {
         case id
@@ -37,6 +38,7 @@ struct ContainerConfiguration: Codable, Equatable {
         case rosetta
         case dns
         case resources
+        case labels
     }
 }
 

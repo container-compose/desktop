@@ -15,6 +15,7 @@ struct ContainerDetailView: View {
         case network = "Network"
         case environment = "Environment"
         case mounts = "Mounts"
+        case labels = "Labels"
         case logs = "Logs"
 
         var systemImage: String {
@@ -27,6 +28,8 @@ struct ContainerDetailView: View {
                 return "gearshape"
             case .mounts:
                 return "externaldrive"
+            case .labels:
+                return "tag"
             case .logs:
                 return "doc.text"
             }
@@ -89,6 +92,8 @@ struct ContainerDetailView: View {
                 containerEnvironmentTab
             case .mounts:
                 containerMountsTab
+            case .labels:
+                containerLabelsTab
             case .logs:
                 LogsView(containerId: container.configuration.id)
                     .environmentObject(containerService)
@@ -141,9 +146,17 @@ struct ContainerDetailView: View {
 
     private var containerMountsTab: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 20) {
+            LazyVStack(alignment: .leading, spacing: 16) {
                 containerMountsSection(container: container)
-                Spacer(minLength: 20)
+            }
+            .padding()
+        }
+    }
+
+    private var containerLabelsTab: some View {
+        ScrollView {
+            LazyVStack(alignment: .leading, spacing: 16) {
+                containerLabelsSection(container: container)
             }
             .padding()
         }
@@ -432,6 +445,48 @@ struct ContainerDetailView: View {
                 }
             } else {
                 Text("No mounts")
+                    .foregroundColor(.secondary)
+                    .italic()
+            }
+        }
+    }
+
+    private func containerLabelsSection(container: Container) -> some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Labels")
+                .font(.headline)
+                .foregroundColor(.primary)
+
+            if let labels = container.configuration.labels, !labels.isEmpty {
+                ScrollView {
+                    LazyVStack(alignment: .leading, spacing: 6) {
+                        ForEach(Array(labels.keys.sorted()), id: \.self) { key in
+                            HStack(alignment: .top) {
+                                Text(key)
+                                    .font(.system(.subheadline, design: .monospaced))
+                                    .foregroundColor(.primary)
+                                    .frame(minWidth: 100, alignment: .leading)
+
+                                Text("=")
+                                    .font(.system(.subheadline, design: .monospaced))
+                                    .foregroundColor(.secondary)
+
+                                Text(labels[key] ?? "")
+                                    .font(.system(.subheadline, design: .monospaced))
+                                    .foregroundColor(.secondary)
+                                    .textSelection(.enabled)
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                            }
+                            .padding(.vertical, 2)
+                        }
+                    }
+                }
+                .frame(maxHeight: 200)
+                .padding()
+                .background(Color(NSColor.controlBackgroundColor).opacity(0.5))
+                .cornerRadius(8)
+            } else {
+                Text("No labels")
                     .foregroundColor(.secondary)
                     .italic()
             }
