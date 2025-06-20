@@ -26,7 +26,6 @@ struct OrchardApp: App {
                         await containerService.checkForUpdatesManually()
                     }
                 }
-                .keyboardShortcut("u", modifiers: [.command, .option])
 
                 Divider()
 
